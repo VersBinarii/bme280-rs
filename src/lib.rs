@@ -154,21 +154,20 @@ impl<E> Measurements<E> {
     ) -> Result<f32, Error<E>> {
         let var1: f32 = uncompensated as f32 / 16384.0 - calibration.dig_t1 as f32 / 1024.0;
         let var1 = var1 * calibration.dig_t2 as f32;
-
         let var2 = uncompensated as f32 / 131072.0 - calibration.dig_t1 as f32 / 8192.0;
         let var2 = var2 * var2 * calibration.dig_t3 as f32;
 
         calibration.t_fine = (var1 + var2) as i32;
 
         let temperature = (var1 + var2) / 5120.0;
-
-        Ok(if temperature < BME280_TEMP_MIN {
+        let temperature = if temperature < BME280_TEMP_MIN {
             BME280_TEMP_MIN
         } else if temperature > BME280_TEMP_MAX {
             BME280_TEMP_MAX
         } else {
             temperature
-        })
+        };
+        Ok(temperature)
     }
 
     fn compensate_pressure(
@@ -214,6 +213,7 @@ impl<E> Measurements<E> {
         let var5: f32 = 1.0 + (calibration.dig_h3 as f32 / 67108864.0) * var1;
         let var6: f32 = 1.0 + (calibration.dig_h6 as f32 / 67108864.0) * var1 * var5;
         let var6: f32 = var3 * var4 * (var5 * var6);
+
         let humidity: f32 = var6 * (1.0 - calibration.dig_h1 as f32 * var6 / 524288.0);
         let humidity = if humidity < BME280_HUMIDITY_MIN {
             BME280_HUMIDITY_MIN
