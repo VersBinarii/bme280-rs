@@ -60,8 +60,10 @@ const BME280_CHIP_ID: u8 = 0x60;
 const BME280_CHIP_ID_ADDR: u8 = 0xD0;
 
 const BME280_DATA_ADDR: u8 = 0xF7;
+const BME280_P_T_CALIB_DATA_ADDR: u8 = 0x88;
 
 const BME280_P_T_H_DATA_LEN: usize = 8;
+const BME280_P_T_CALIB_DATA_LEN: usize = 26;
 
 const BME280_TEMP_MIN: f32 = -40.0;
 const BME280_TEMP_MAX: f32 = 85.0;
@@ -71,6 +73,12 @@ const BME280_PRESSURE_MAX: f32 = 110000.0;
 
 const BME280_HUMIDITY_MIN: f32 = 0.0;
 const BME280_HUMIDITY_MAX: f32 = 100.0;
+
+macro_rules! concat_bytes {
+    ($msb:expr, $lsb:expr) => {
+        (($msb as u16) << 8) | ($lsb as u16)
+    };
+}
 
 #[derive(Debug)]
 pub enum Error<E> {
@@ -262,7 +270,8 @@ where
 
     pub fn init(&mut self) -> Result<(), Error<E>> {
         self.verify_chip_id()?;
-        self.soft_reset()
+        self.soft_reset()?;
+        self.calibrate()
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
@@ -277,6 +286,12 @@ where
     pub fn soft_reset(&mut self) -> Result<(), Error<E>> {
         self.write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
         self.delay.delay_ms(2); // startup time is 2ms
+        Ok(())
+    }
+
+    fn calibrate(&mut self) -> Result<(), Error<E>> {
+        let calibration_data = self.read_calib_data(BME280_P_T_CALIB_DATA_ADDR)?;
+        self.calibration = Some(parse_calib_data(calibration_data));
         Ok(())
     }
 
@@ -307,9 +322,63 @@ where
         Ok(data)
     }
 
+    fn read_calib_data(
+        &mut self,
+        register: u8,
+    ) -> Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<E>> {
+        let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
+        self.i2c
+            .write_read(self.address, &[register], &mut data)
+            .map_err(Error::I2c)?;
+        Ok(data)
+    }
+
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<E>> {
         self.i2c
             .write(self.address, &[register, payload])
             .map_err(Error::I2c)
+    }
+}
+
+fn parse_calib_data(data: [u8; BME280_P_T_CALIB_DATA_LEN]) -> CalibrationData {
+    let dig_t1 = concat_bytes!(data[1], data[0]);
+    let dig_t2 = concat_bytes!(data[3], data[2]) as i16;
+    let dig_t3 = concat_bytes!(data[5], data[4]) as i16;
+    let dig_p1 = concat_bytes!(data[7], data[6]);
+    let dig_p2 = concat_bytes!(data[9], data[8]) as i16;
+    let dig_p3 = concat_bytes!(data[11], data[10]) as i16;
+    let dig_p4 = concat_bytes!(data[13], data[12]) as i16;
+    let dig_p5 = concat_bytes!(data[15], data[14]) as i16;
+    let dig_p6 = concat_bytes!(data[17], data[16]) as i16;
+    let dig_p7 = concat_bytes!(data[19], data[18]) as i16;
+    let dig_p8 = concat_bytes!(data[21], data[20]) as i16;
+    let dig_p9 = concat_bytes!(data[23], data[22]) as i16;
+    let dig_h1 = data[25];
+    let dig_h2 = concat_bytes!(data[1], data[0]) as i16;
+    let dig_h3 = data[2];
+    let dig_h4 = (data[3] as i16 * 16) | ((data[4] as i16) & 0x0F);
+    let dig_h5 = (data[5] as i16 * 16) | ((data[4] as i16) >> 4);
+    let dig_h6 = data[6] as i8;
+
+    CalibrationData {
+        dig_t1,
+        dig_t2,
+        dig_t3,
+        dig_p1,
+        dig_p2,
+        dig_p3,
+        dig_p4,
+        dig_p5,
+        dig_p6,
+        dig_p7,
+        dig_p8,
+        dig_p9,
+        dig_h1,
+        dig_h2,
+        dig_h3,
+        dig_h4,
+        dig_h5,
+        dig_h6,
+        t_fine: 0,
     }
 }
