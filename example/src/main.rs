@@ -5,7 +5,7 @@ use hal::{Delay, I2cdev};
 use bme280::BME280;
 
 fn main() {
-    let i2c_bus = I2cdev::new("/dev/i2c-0").unwrap();
+    let i2c_bus = I2cdev::new("/dev/i2c-1").unwrap();
     let mut bme280 = BME280::new_primary(i2c_bus, Delay);
     bme280.init().unwrap();
     let measurements = bme280.measure().unwrap();
