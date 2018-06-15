@@ -429,6 +429,7 @@ where
     /// Captures and processes sensor data for temperature, pressure, and humidity
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
         self.forced()?;
+        self.delay.delay_ms(40); // await measurement
         let measurements = self.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {
