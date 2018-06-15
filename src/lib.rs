@@ -312,7 +312,8 @@ where
         self.verify_chip_id()?;
         self.soft_reset()?;
         self.calibrate()?;
-        self.configure()
+        self.configure()?;
+        self.forced()
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
@@ -385,6 +386,20 @@ where
             BME280_NORMAL_MODE => Ok(SensorMode::Normal),
             _ => Err(Error::InvalidData),
         }
+    }
+
+    fn forced(&mut self) -> Result<(), Error<E>> {
+        self.set_mode(BME280_FORCED_MODE)
+    }
+
+    fn set_mode(&mut self, mode: u8) -> Result<(), Error<E>> {
+        match self.mode()? {
+            SensorMode::Sleep => {}
+            _ => self.soft_reset()?,
+        };
+        let data = self.read_register(BME280_PWR_CTRL_ADDR)?;
+        let data = set_bits!(data, BME280_SENSOR_MODE_MSK, 0, mode);
+        self.write_register(BME280_PWR_CTRL_ADDR, data)
     }
 
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
