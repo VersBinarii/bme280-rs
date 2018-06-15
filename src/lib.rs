@@ -72,10 +72,13 @@ const BME280_CHIP_ID: u8 = 0x60;
 const BME280_CHIP_ID_ADDR: u8 = 0xD0;
 
 const BME280_DATA_ADDR: u8 = 0xF7;
-const BME280_P_T_CALIB_DATA_ADDR: u8 = 0x88;
-
 const BME280_P_T_H_DATA_LEN: usize = 8;
+
+const BME280_P_T_CALIB_DATA_ADDR: u8 = 0x88;
 const BME280_P_T_CALIB_DATA_LEN: usize = 26;
+
+const BME280_H_CALIB_DATA_ADDR: u8 = 0xE1;
+const BME280_H_CALIB_DATA_LEN: usize = 7;
 
 const BME280_TEMP_MIN: f32 = -40.0;
 const BME280_TEMP_MAX: f32 = 85.0;
@@ -352,8 +355,9 @@ where
     }
 
     fn calibrate(&mut self) -> Result<(), Error<E>> {
-        let calibration_data = self.read_calib_data(BME280_P_T_CALIB_DATA_ADDR)?;
-        self.calibration = Some(parse_calib_data(&calibration_data));
+        let pt_calib_data = self.read_pt_calib_data(BME280_P_T_CALIB_DATA_ADDR)?;
+        let h_calib_data = self.read_h_calib_data(BME280_H_CALIB_DATA_ADDR)?;
+        self.calibration = Some(parse_calib_data(&pt_calib_data, &h_calib_data));
         Ok(())
     }
 
@@ -451,11 +455,22 @@ where
         Ok(data)
     }
 
-    fn read_calib_data(
+    fn read_pt_calib_data(
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<E>> {
         let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
+        self.i2c
+            .write_read(self.address, &[register], &mut data)
+            .map_err(Error::I2c)?;
+        Ok(data)
+    }
+
+    fn read_h_calib_data(
+        &mut self,
+        register: u8,
+    ) -> Result<[u8; BME280_H_CALIB_DATA_LEN], Error<E>> {
+        let mut data: [u8; BME280_H_CALIB_DATA_LEN] = [0; BME280_H_CALIB_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
             .map_err(Error::I2c)?;
@@ -469,25 +484,25 @@ where
     }
 }
 
-fn parse_calib_data(data: &[u8; BME280_P_T_CALIB_DATA_LEN]) -> CalibrationData {
-    let dig_t1 = concat_bytes!(data[1], data[0]);
-    let dig_t2 = concat_bytes!(data[3], data[2]) as i16;
-    let dig_t3 = concat_bytes!(data[5], data[4]) as i16;
-    let dig_p1 = concat_bytes!(data[7], data[6]);
-    let dig_p2 = concat_bytes!(data[9], data[8]) as i16;
-    let dig_p3 = concat_bytes!(data[11], data[10]) as i16;
-    let dig_p4 = concat_bytes!(data[13], data[12]) as i16;
-    let dig_p5 = concat_bytes!(data[15], data[14]) as i16;
-    let dig_p6 = concat_bytes!(data[17], data[16]) as i16;
-    let dig_p7 = concat_bytes!(data[19], data[18]) as i16;
-    let dig_p8 = concat_bytes!(data[21], data[20]) as i16;
-    let dig_p9 = concat_bytes!(data[23], data[22]) as i16;
-    let dig_h1 = data[25];
-    let dig_h2 = concat_bytes!(data[1], data[0]) as i16;
-    let dig_h3 = data[2];
-    let dig_h4 = (data[3] as i16 * 16) | ((data[4] as i16) & 0x0F);
-    let dig_h5 = (data[5] as i16 * 16) | ((data[4] as i16) >> 4);
-    let dig_h6 = data[6] as i8;
+fn parse_calib_data(pt_data: &[u8; BME280_P_T_CALIB_DATA_LEN], h_data: &[u8; BME280_H_CALIB_DATA_LEN]) -> CalibrationData {
+    let dig_t1 = concat_bytes!(pt_data[1], pt_data[0]);
+    let dig_t2 = concat_bytes!(pt_data[3], pt_data[2]) as i16;
+    let dig_t3 = concat_bytes!(pt_data[5], pt_data[4]) as i16;
+    let dig_p1 = concat_bytes!(pt_data[7], pt_data[6]);
+    let dig_p2 = concat_bytes!(pt_data[9], pt_data[8]) as i16;
+    let dig_p3 = concat_bytes!(pt_data[11], pt_data[10]) as i16;
+    let dig_p4 = concat_bytes!(pt_data[13], pt_data[12]) as i16;
+    let dig_p5 = concat_bytes!(pt_data[15], pt_data[14]) as i16;
+    let dig_p6 = concat_bytes!(pt_data[17], pt_data[16]) as i16;
+    let dig_p7 = concat_bytes!(pt_data[19], pt_data[18]) as i16;
+    let dig_p8 = concat_bytes!(pt_data[21], pt_data[20]) as i16;
+    let dig_p9 = concat_bytes!(pt_data[23], pt_data[22]) as i16;
+    let dig_h1 = pt_data[25];
+    let dig_h2 = concat_bytes!(h_data[1], h_data[0]) as i16;
+    let dig_h3 = h_data[2];
+    let dig_h4 = (h_data[3] as i16 * 16) | ((h_data[4] as i16) & 0x0F);
+    let dig_h5 = (h_data[5] as i16 * 16) | ((h_data[4] as i16) >> 4);
+    let dig_h6 = h_data[6] as i8;
 
     CalibrationData {
         dig_t1,
