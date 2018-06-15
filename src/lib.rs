@@ -53,6 +53,11 @@ use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
 const BME280_I2C_ADDR_PRIMARY: u8 = 0x76;
 const BME280_I2C_ADDR_SECONDARY: u8 = 0x77;
 
+const BME280_PWR_CTRL_ADDR: u8 = 0xF4;
+const BME280_CTRL_HUM_ADDR: u8 = 0xF2;
+const BME280_CTRL_MEAS_ADDR: u8 = 0xF4;
+const BME280_CONFIG_ADDR: u8 = 0xF5;
+
 const BME280_RESET_ADDR: u8 = 0xE0;
 const BME280_SOFT_RESET_CMD: u8 = 0xB6;
 
@@ -74,9 +79,37 @@ const BME280_PRESSURE_MAX: f32 = 110000.0;
 const BME280_HUMIDITY_MIN: f32 = 0.0;
 const BME280_HUMIDITY_MAX: f32 = 100.0;
 
+const BME280_SLEEP_MODE: u8 = 0x00;
+const BME280_FORCED_MODE: u8 = 0x01;
+const BME280_NORMAL_MODE: u8 = 0x03;
+
+const BME280_SENSOR_MODE_MSK: u8 = 0x03;
+
+const BME280_CTRL_HUM_MSK: u8 = 0x07;
+
+const BME280_CTRL_PRESS_MSK: u8 = 0x1C;
+const BME280_CTRL_PRESS_POS: u8 = 0x02;
+
+const BME280_CTRL_TEMP_MSK: u8 = 0xE0;
+const BME280_CTRL_TEMP_POS: u8 = 0x05;
+
+const BME280_FILTER_MSK: u8 = 0x1C;
+const BME280_FILTER_POS: u8 = 0x02;
+const BME280_FILTER_COEFF_16: u8 = 0x04;
+
+const BME280_OVERSAMPLING_1X: u8 = 0x01;
+const BME280_OVERSAMPLING_2X: u8 = 0x02;
+const BME280_OVERSAMPLING_16X: u8 = 0x05;
+
 macro_rules! concat_bytes {
     ($msb:expr, $lsb:expr) => {
         (($msb as u16) << 8) | ($lsb as u16)
+    };
+}
+
+macro_rules! set_bits {
+    ($reg_data:expr, $mask:expr, $pos:expr, $data:expr) => {
+        ($reg_data & !$mask) | (($data << $pos) & $mask)
     };
 }
 
@@ -92,6 +125,13 @@ pub enum Error<E> {
     NoCalibrationData,
     /// Chip ID doesn't match expected value
     UnsupportedChip,
+}
+
+#[derive(Debug)]
+pub enum SensorMode {
+    Sleep,
+    Forced,
+    Normal,
 }
 
 #[derive(Debug)]
@@ -271,7 +311,8 @@ where
     pub fn init(&mut self) -> Result<(), Error<E>> {
         self.verify_chip_id()?;
         self.soft_reset()?;
-        self.calibrate()
+        self.calibrate()?;
+        self.configure()
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
@@ -291,8 +332,59 @@ where
 
     fn calibrate(&mut self) -> Result<(), Error<E>> {
         let calibration_data = self.read_calib_data(BME280_P_T_CALIB_DATA_ADDR)?;
-        self.calibration = Some(parse_calib_data(calibration_data));
+        self.calibration = Some(parse_calib_data(&calibration_data));
         Ok(())
+    }
+
+    fn configure(&mut self) -> Result<(), Error<E>> {
+        match self.mode()? {
+            SensorMode::Sleep => {}
+            _ => self.soft_reset()?,
+        };
+
+        self.write_register(
+            BME280_CTRL_HUM_ADDR,
+            BME280_OVERSAMPLING_1X & BME280_CTRL_HUM_MSK,
+        )?;
+        let ctrl_meas = self.read_register(BME280_CTRL_MEAS_ADDR)?;
+        self.write_register(BME280_CTRL_MEAS_ADDR, ctrl_meas)?;
+
+        let data = self.read_register(BME280_CTRL_MEAS_ADDR)?;
+        let data = set_bits!(
+            data,
+            BME280_CTRL_PRESS_MSK,
+            BME280_CTRL_PRESS_POS,
+            BME280_OVERSAMPLING_16X
+        );
+        let data = set_bits!(
+            data,
+            BME280_CTRL_TEMP_MSK,
+            BME280_CTRL_TEMP_POS,
+            BME280_OVERSAMPLING_2X
+        );
+        self.write_register(BME280_CTRL_MEAS_ADDR, data)?;
+
+        let data = self.read_register(BME280_CONFIG_ADDR)?;
+        let data = set_bits!(
+            data,
+            BME280_FILTER_MSK,
+            BME280_FILTER_POS,
+            BME280_FILTER_COEFF_16
+        );
+        self.write_register(BME280_CONFIG_ADDR, data)
+    }
+
+    fn mode(&mut self) -> Result<SensorMode, Error<E>> {
+        let mut data: [u8; 1] = [0];
+        self.i2c
+            .write_read(self.address, &[BME280_PWR_CTRL_ADDR], &mut data)
+            .map_err(Error::I2c)?;
+        match data[0] & BME280_SENSOR_MODE_MSK {
+            BME280_SLEEP_MODE => Ok(SensorMode::Sleep),
+            BME280_FORCED_MODE => Ok(SensorMode::Forced),
+            BME280_NORMAL_MODE => Ok(SensorMode::Normal),
+            _ => Err(Error::InvalidData),
+        }
     }
 
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
@@ -340,7 +432,7 @@ where
     }
 }
 
-fn parse_calib_data(data: [u8; BME280_P_T_CALIB_DATA_LEN]) -> CalibrationData {
+fn parse_calib_data(data: &[u8; BME280_P_T_CALIB_DATA_LEN]) -> CalibrationData {
     let dig_t1 = concat_bytes!(data[1], data[0]);
     let dig_t2 = concat_bytes!(data[3], data[2]) as i16;
     let dig_t3 = concat_bytes!(data[5], data[4]) as i16;
