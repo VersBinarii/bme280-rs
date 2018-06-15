@@ -1,9 +1,10 @@
 #![doc(html_root_url = "https://docs.rs/bme280")]
 #![doc(issue_tracker_base_url = "https://github.com/uber-foo/bme280/issues/")]
 #![deny(
-    missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts, trivial_numeric_casts, unsafe_code,
-    unstable_features, unused_import_braces, unused_qualifications, unused_variables,
-    unreachable_code, unused_comparisons, unused_imports, unused_must_use
+    missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
+    trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
+    unused_qualifications, unused_variables, unreachable_code, unused_comparisons, unused_imports,
+    unused_must_use
 )]
 #![no_std]
 
@@ -485,7 +486,10 @@ where
     }
 }
 
-fn parse_calib_data(pt_data: &[u8; BME280_P_T_CALIB_DATA_LEN], h_data: &[u8; BME280_H_CALIB_DATA_LEN]) -> CalibrationData {
+fn parse_calib_data(
+    pt_data: &[u8; BME280_P_T_CALIB_DATA_LEN],
+    h_data: &[u8; BME280_H_CALIB_DATA_LEN],
+) -> CalibrationData {
     let dig_t1 = concat_bytes!(pt_data[1], pt_data[0]);
     let dig_t2 = concat_bytes!(pt_data[3], pt_data[2]) as i16;
     let dig_t3 = concat_bytes!(pt_data[5], pt_data[4]) as i16;
