@@ -312,8 +312,7 @@ where
         self.verify_chip_id()?;
         self.soft_reset()?;
         self.calibrate()?;
-        self.configure()?;
-        self.forced()
+        self.configure()
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
@@ -403,6 +402,7 @@ where
     }
 
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
+        self.forced()?;
         let measurements = self.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {
