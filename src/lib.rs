@@ -1,14 +1,22 @@
+#![doc(html_root_url = "https://docs.rs/bme280")]
+#![doc(issue_tracker_base_url = "https://github.com/uber-foo/bme280/issues/")]
+#![deny(
+    missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts, trivial_numeric_casts, unsafe_code,
+    unstable_features, unused_import_braces, unused_qualifications, unused_variables,
+    unreachable_code, unused_comparisons, unused_imports, unused_must_use
+)]
+#![no_std]
+
 //! A platform agnostic Rust driver for the Bosch BME280, based on the
 //! [`embedded-hal`](https://github.com/japaric/embedded-hal) traits.
 //!
 //! ## The Device
 //!
-//! The Bosch BME280 is a highly accurate sensor for atmospheric temperature,
-//! pressure, and relative humidity.
+//! The [Bosch BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
+//! is a highly accurate sensor for atmospheric temperature, pressure, and
+//! relative humidity.
 //!
 //! The device has I²C and SPI interfaces (SPI is not currently supported).
-//!
-//! - [Details and datasheet](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
 //!
 //! ## Usage
 //!
@@ -42,7 +50,6 @@
 //! println!("Temperature = {} deg C", measurements.temperature);
 //! println!("Pressure = {} pascals", measurements.pressure);
 //! ```
-#![no_std]
 
 extern crate embedded_hal;
 
@@ -113,11 +120,12 @@ macro_rules! set_bits {
     };
 }
 
+/// BME280 errors
 #[derive(Debug)]
 pub enum Error<E> {
     /// Failed to compensate a raw measurement
     CompensationFailed,
-    /// I2C bus error
+    /// I²C bus error
     I2c(E),
     /// Failed to parse sensor data
     InvalidData,
@@ -127,10 +135,14 @@ pub enum Error<E> {
     UnsupportedChip,
 }
 
-#[derive(Debug)]
+/// BME280 operating mode
+#[derive(Debug, Copy, Clone)]
 pub enum SensorMode {
+    /// Sleep mode
     Sleep,
+    /// Forced mode
     Forced,
+    /// Normal mode
     Normal,
 }
 
@@ -157,10 +169,14 @@ struct CalibrationData {
     t_fine: i32,
 }
 
+/// Measurement data
 #[derive(Debug)]
 pub struct Measurements<E> {
+    /// temperature in degrees celsius
     pub temperature: f32,
+    /// pressure in pascals
     pub pressure: f32,
+    /// percent relative humidity
     pub humidity: f32,
     _e: PhantomData<E>,
 }
@@ -274,6 +290,7 @@ impl<E> Measurements<E> {
     }
 }
 
+/// Representation of a BME280
 #[derive(Debug, Default)]
 pub struct BME280<I2C, D> {
     /// concrete I²C device implementation
@@ -291,14 +308,17 @@ where
     I2C: Read<Error = E> + Write<Error = E> + WriteRead<Error = E>,
     D: DelayMs<u8>,
 {
+    /// Create a new BME280 struct using the primary I²C address `0x76`
     pub fn new_primary(i2c: I2C, delay: D) -> Self {
         Self::new(i2c, BME280_I2C_ADDR_PRIMARY, delay)
     }
 
+    /// Create a new BME280 struct using the secondary I²C address `0x77`
     pub fn new_secondary(i2c: I2C, delay: D) -> Self {
         Self::new(i2c, BME280_I2C_ADDR_SECONDARY, delay)
     }
 
+    /// Create a new BME280 struct using a custom I²C address
     pub fn new(i2c: I2C, address: u8, delay: D) -> Self {
         BME280 {
             i2c,
@@ -308,6 +328,7 @@ where
         }
     }
 
+    /// Initializes the BME280
     pub fn init(&mut self) -> Result<(), Error<E>> {
         self.verify_chip_id()?;
         self.soft_reset()?;
@@ -324,7 +345,7 @@ where
         }
     }
 
-    pub fn soft_reset(&mut self) -> Result<(), Error<E>> {
+    fn soft_reset(&mut self) -> Result<(), Error<E>> {
         self.write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
         self.delay.delay_ms(2); // startup time is 2ms
         Ok(())
@@ -401,6 +422,7 @@ where
         self.write_register(BME280_PWR_CTRL_ADDR, data)
     }
 
+    /// Captures and processes sensor data for temperature, pressure, and humidity
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
         self.forced()?;
         let measurements = self.read_data(BME280_DATA_ADDR)?;
