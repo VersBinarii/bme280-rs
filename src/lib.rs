@@ -70,6 +70,7 @@ const BME280_RESET_ADDR: u8 = 0xE0;
 const BME280_SOFT_RESET_CMD: u8 = 0xB6;
 
 const BME280_CHIP_ID: u8 = 0x60;
+const BMP280_CHIP_ID: u8 = 0x58;
 const BME280_CHIP_ID_ADDR: u8 = 0xD0;
 
 const BME280_DATA_ADDR: u8 = 0xF7;
@@ -342,7 +343,7 @@ where
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
         let chip_id = self.read_register(BME280_CHIP_ID_ADDR)?;
-        if chip_id == BME280_CHIP_ID {
+        if chip_id == BME280_CHIP_ID || chip_id == BMP280_CHIP_ID {
             Ok(())
         } else {
             Err(Error::UnsupportedChip)
