@@ -8,7 +8,7 @@
 )]
 #![no_std]
 
-//! A platform agnostic Rust driver for the Bosch BME280, based on the
+//! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
 //! [`embedded-hal`](https://github.com/japaric/embedded-hal) traits.
 //!
 //! ## The Device
@@ -16,6 +16,9 @@
 //! The [Bosch BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
 //! is a highly accurate sensor for atmospheric temperature, pressure, and
 //! relative humidity.
+//!
+//! The [Bosch BMP280](https://www.bosch-sensortec.com/bst/products/all_products/bmp280)
+//! is a highly accurate sensor for atmospheric temperature, and pressure.
 //!
 //! The device has I²C and SPI interfaces (SPI is not currently supported).
 //!
@@ -181,7 +184,7 @@ pub struct Measurements<E> {
     pub temperature: f32,
     /// pressure in pascals
     pub pressure: f32,
-    /// percent relative humidity
+    /// percent relative humidity (`0` with BMP280)
     pub humidity: f32,
     _e: PhantomData<E>,
 }
