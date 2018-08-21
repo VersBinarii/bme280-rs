@@ -8,7 +8,7 @@
 )]
 #![no_std]
 
-//! A platform agnostic Rust driver for the Bosch BME280, based on the
+//! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
 //! [`embedded-hal`](https://github.com/japaric/embedded-hal) traits.
 //!
 //! ## The Device
@@ -16,6 +16,9 @@
 //! The [Bosch BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
 //! is a highly accurate sensor for atmospheric temperature, pressure, and
 //! relative humidity.
+//!
+//! The [Bosch BMP280](https://www.bosch-sensortec.com/bst/products/all_products/bmp280)
+//! is a highly accurate sensor for atmospheric temperature, and pressure.
 //!
 //! The device has I²C and SPI interfaces (SPI is not currently supported).
 //!
@@ -70,6 +73,7 @@ const BME280_RESET_ADDR: u8 = 0xE0;
 const BME280_SOFT_RESET_CMD: u8 = 0xB6;
 
 const BME280_CHIP_ID: u8 = 0x60;
+const BMP280_CHIP_ID: u8 = 0x58;
 const BME280_CHIP_ID_ADDR: u8 = 0xD0;
 
 const BME280_DATA_ADDR: u8 = 0xF7;
@@ -180,7 +184,7 @@ pub struct Measurements<E> {
     pub temperature: f32,
     /// pressure in pascals
     pub pressure: f32,
-    /// percent relative humidity
+    /// percent relative humidity (`0` with BMP280)
     pub humidity: f32,
     _e: PhantomData<E>,
 }
@@ -342,7 +346,7 @@ where
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
         let chip_id = self.read_register(BME280_CHIP_ID_ADDR)?;
-        if chip_id == BME280_CHIP_ID {
+        if chip_id == BME280_CHIP_ID || chip_id == BMP280_CHIP_ID {
             Ok(())
         } else {
             Err(Error::UnsupportedChip)
