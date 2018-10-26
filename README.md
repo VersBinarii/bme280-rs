@@ -2,9 +2,6 @@
 
 A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric pressure sensor and the Bosch BMP280 temperature and atmospheric pressure sensor.
 
-WARNING: This library is under active development. It is not currently intended
-for production use.
-
 ## License
 
 Licensed under either of:
