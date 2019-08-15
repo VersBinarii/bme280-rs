@@ -1,9 +1,19 @@
 #![doc(html_root_url = "https://docs.rs/bme280")]
 #![doc(issue_tracker_base_url = "https://github.com/uber-foo/bme280/issues/")]
 #![deny(
-    missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
-    trivial_numeric_casts, unsafe_code, unstable_features, unused_import_braces,
-    unused_qualifications, unused_variables, unreachable_code, unused_comparisons, unused_imports,
+    missing_docs,
+    missing_debug_implementations,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unstable_features,
+    unused_import_braces,
+    unused_qualifications,
+    unused_variables,
+    unreachable_code,
+    unused_comparisons,
+    unused_imports,
     unused_must_use
 )]
 #![no_std]
@@ -34,10 +44,10 @@
 //! // using Linux I2C Bus #1 in this example
 //! let i2c_bus = I2cdev::new("/dev/i2c-1").unwrap();
 //!
-//! // initialize the BME280 using the primary I2C address 0x77
+//! // initialize the BME280 using the primary I2C address 0x76
 //! let mut bme280 = BME280::new_primary(i2c_bus, Delay);
 //!
-//! // or, initialize the BME280 using the secondary I2C address 0x78
+//! // or, initialize the BME280 using the secondary I2C address 0x77
 //! // let mut bme280 = BME280::new_secondary(i2c_bus, Delay);
 //!
 //! // or, initialize the BME280 using a custom I2C address
