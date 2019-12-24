@@ -195,6 +195,7 @@ pub struct Measurements<E> {
     pub pressure: f32,
     /// percent relative humidity (`0` with BMP280)
     pub humidity: f32,
+    #[cfg_attr(feature = "serde", serde(skip))]
     _e: PhantomData<E>,
 }
 
