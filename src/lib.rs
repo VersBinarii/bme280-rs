@@ -35,10 +35,7 @@
 //! ## Usage
 //!
 //! ```no_run
-//! extern crate linux_embedded_hal as hal;
-//! extern crate bme280;
-//!
-//! use hal::{Delay, I2cdev};
+//! use linux_embedded_hal::{Delay, I2cdev};
 //! use bme280::BME280;
 //!
 //! // using Linux I2C Bus #1 in this example
@@ -65,11 +62,12 @@
 //! println!("Pressure = {} pascals", measurements.pressure);
 //! ```
 
-extern crate embedded_hal;
-
 use core::marker::PhantomData;
 use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
+
+#[cfg(feature = "serde")]
+use serde::Serialize;
 
 const BME280_I2C_ADDR_PRIMARY: u8 = 0x76;
 const BME280_I2C_ADDR_SECONDARY: u8 = 0x77;
@@ -188,6 +186,7 @@ struct CalibrationData {
 }
 
 /// Measurement data
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[derive(Debug)]
 pub struct Measurements<E> {
     /// temperature in degrees celsius

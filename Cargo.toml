@@ -1,15 +1,17 @@
 [package]
 name = "bme280"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Sean Bruton <sean@uberfoo.net>"]
 description = "A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric pressure sensor and the Bosch BMP280 temperature, and atmospheric pressure sensor"
 repository = "https://github.com/uber-foo/bme280-rs"
 license = "MIT OR Apache-2.0"
 keywords = ["bme280", "bmp280", "temperature", "pressure", "humidity"]
 categories = ["embedded", "no-std", "hardware-support"]
+edition = "2018"
 
 [dependencies]
-embedded-hal = "0.2.1"
+embedded-hal = "0.2.3"
+serde = { version = "1.0.104", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-linux-embedded-hal = "0.2.0"
+linux-embedded-hal = "0.3.0"
