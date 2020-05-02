@@ -1,8 +1,8 @@
-extern crate linux_embedded_hal as hal;
 extern crate bme280;
+extern crate linux_embedded_hal as hal;
 
+use bme280::i2c::BME280;
 use hal::{Delay, I2cdev};
-use bme280::BME280;
 use std::thread;
 use std::time::Duration;
 
