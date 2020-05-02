@@ -141,8 +141,8 @@ macro_rules! set_bits {
 pub enum Error<E> {
     /// Failed to compensate a raw measurement
     CompensationFailed,
-    /// I²C bus error
-    I2c(E),
+    /// I²C or SPI bus error
+    Bus(E),
     /// Failed to parse sensor data
     InvalidData,
     /// No calibration data is available (probably forgot to call or check BME280::init for failure)
@@ -418,7 +418,7 @@ where
         let mut data: [u8; 1] = [0];
         self.i2c
             .write_read(self.address, &[BME280_PWR_CTRL_ADDR], &mut data)
-            .map_err(Error::I2c)?;
+            .map_err(Error::Bus)?;
         match data[0] & BME280_SENSOR_MODE_MSK {
             BME280_SLEEP_MODE => Ok(SensorMode::Sleep),
             BME280_FORCED_MODE => Ok(SensorMode::Forced),
@@ -459,7 +459,7 @@ where
         let mut data: [u8; 1] = [0];
         self.i2c
             .write_read(self.address, &[register], &mut data)
-            .map_err(Error::I2c)?;
+            .map_err(Error::Bus)?;
         Ok(data[0])
     }
 
@@ -467,7 +467,7 @@ where
         let mut data: [u8; BME280_P_T_H_DATA_LEN] = [0; BME280_P_T_H_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
-            .map_err(Error::I2c)?;
+            .map_err(Error::Bus)?;
         Ok(data)
     }
 
@@ -478,7 +478,7 @@ where
         let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
-            .map_err(Error::I2c)?;
+            .map_err(Error::Bus)?;
         Ok(data)
     }
 
@@ -489,14 +489,14 @@ where
         let mut data: [u8; BME280_H_CALIB_DATA_LEN] = [0; BME280_H_CALIB_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
-            .map_err(Error::I2c)?;
+            .map_err(Error::Bus)?;
         Ok(data)
     }
 
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<E>> {
         self.i2c
             .write(self.address, &[register, payload])
-            .map_err(Error::I2c)
+            .map_err(Error::Bus)
     }
 }
 
