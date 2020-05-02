@@ -30,7 +30,7 @@
 //! The [Bosch BMP280](https://www.bosch-sensortec.com/bst/products/all_products/bmp280)
 //! is a highly accurate sensor for atmospheric temperature, and pressure.
 //!
-//! The device has I²C and SPI interfaces (SPI is not currently supported).
+//! The device has I²C and SPI interfaces.
 //!
 //! ## Usage
 //!
@@ -63,6 +63,7 @@
 //! ```
 
 pub mod i2c;
+pub mod spi;
 
 use core::marker::PhantomData;
 use embedded_hal::blocking::delay::DelayMs;
