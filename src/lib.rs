@@ -350,8 +350,8 @@ where
     pub fn init(&mut self) -> Result<(), Error<E>> {
         self.verify_chip_id()?;
         self.soft_reset()?;
-        self.calibrate()?;
-        self.configure()
+        self.configure()?;
+        self.calibrate()
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
