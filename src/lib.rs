@@ -149,6 +149,8 @@ pub enum Error<E> {
     NoCalibrationData,
     /// Chip ID doesn't match expected value
     UnsupportedChip,
+    /// Delay error
+    Delay,
 }
 
 /// BME280 operating mode
@@ -365,7 +367,7 @@ where
 
     fn soft_reset(&mut self) -> Result<(), Error<E>> {
         self.write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
-        self.delay.delay_ms(2); // startup time is 2ms
+        self.delay.try_delay_ms(2).map_err(|_e| Error::Delay)?; // startup time is 2ms
         Ok(())
     }
 
@@ -417,7 +419,7 @@ where
     fn mode(&mut self) -> Result<SensorMode, Error<E>> {
         let mut data: [u8; 1] = [0];
         self.i2c
-            .write_read(self.address, &[BME280_PWR_CTRL_ADDR], &mut data)
+            .try_write_read(self.address, &[BME280_PWR_CTRL_ADDR], &mut data)
             .map_err(Error::I2c)?;
         match data[0] & BME280_SENSOR_MODE_MSK {
             BME280_SLEEP_MODE => Ok(SensorMode::Sleep),
@@ -444,7 +446,7 @@ where
     /// Captures and processes sensor data for temperature, pressure, and humidity
     pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
         self.forced()?;
-        self.delay.delay_ms(40); // await measurement
+        self.delay.try_delay_ms(40).map_err(|_e| Error::Delay)?; // await measurement
         let measurements = self.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {
@@ -458,7 +460,7 @@ where
     fn read_register(&mut self, register: u8) -> Result<u8, Error<E>> {
         let mut data: [u8; 1] = [0];
         self.i2c
-            .write_read(self.address, &[register], &mut data)
+            .try_write_read(self.address, &[register], &mut data)
             .map_err(Error::I2c)?;
         Ok(data[0])
     }
@@ -466,7 +468,7 @@ where
     fn read_data(&mut self, register: u8) -> Result<[u8; BME280_P_T_H_DATA_LEN], Error<E>> {
         let mut data: [u8; BME280_P_T_H_DATA_LEN] = [0; BME280_P_T_H_DATA_LEN];
         self.i2c
-            .write_read(self.address, &[register], &mut data)
+            .try_write_read(self.address, &[register], &mut data)
             .map_err(Error::I2c)?;
         Ok(data)
     }
@@ -477,7 +479,7 @@ where
     ) -> Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<E>> {
         let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
         self.i2c
-            .write_read(self.address, &[register], &mut data)
+            .try_write_read(self.address, &[register], &mut data)
             .map_err(Error::I2c)?;
         Ok(data)
     }
@@ -488,14 +490,14 @@ where
     ) -> Result<[u8; BME280_H_CALIB_DATA_LEN], Error<E>> {
         let mut data: [u8; BME280_H_CALIB_DATA_LEN] = [0; BME280_H_CALIB_DATA_LEN];
         self.i2c
-            .write_read(self.address, &[register], &mut data)
+            .try_write_read(self.address, &[register], &mut data)
             .map_err(Error::I2c)?;
         Ok(data)
     }
 
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<E>> {
         self.i2c
-            .write(self.address, &[register, payload])
+            .try_write(self.address, &[register, payload])
             .map_err(Error::I2c)
     }
 }
