@@ -42,14 +42,14 @@
 //! let i2c_bus = I2cdev::new("/dev/i2c-1").unwrap();
 //!
 //! // initialize the BME280 using the primary I2C address 0x76
-//! let mut bme280 = BME280::new_primary(i2c_bus, Delay);
+//! let mut bme280 = BME280::new_primary(i2c_bus);
 //!
 //! // or, initialize the BME280 using the secondary I2C address 0x77
-//! // let mut bme280 = BME280::new_secondary(i2c_bus, Delay);
+//! // let mut bme280 = BME280::new_secondary(i2c_bus);
 //!
 //! // or, initialize the BME280 using a custom I2C address
 //! // let bme280_i2c_addr = 0x88;
-//! // let mut bme280 = BME280::new(i2c_bus, bme280_i2c_addr, Delay);
+//! // let mut bme280 = BME280::new(i2c_bus, bme280_i2c_addr);
 //!
 //! // initialize the sensor
 //! bme280.init().unwrap();
@@ -310,48 +310,44 @@ impl<E> Measurements<E> {
 
 /// Representation of a BME280
 #[derive(Debug, Default)]
-pub struct BME280<I2C, D> {
+pub struct BME280<I2C> {
     /// concrete I²C device implementation
     i2c: I2C,
     /// I²C device address
     address: u8,
-    /// concrete Delay implementation
-    delay: D,
     /// calibration data
     calibration: Option<CalibrationData>,
 }
 
-impl<I2C, D, E> BME280<I2C, D>
+impl<I2C, E> BME280<I2C>
 where
     I2C: Read<Error = E> + Write<Error = E> + WriteRead<Error = E>,
-    D: DelayMs<u8>,
 {
     /// Create a new BME280 struct using the primary I²C address `0x76`
-    pub fn new_primary(i2c: I2C, delay: D) -> Self {
-        Self::new(i2c, BME280_I2C_ADDR_PRIMARY, delay)
+    pub fn new_primary(i2c: I2C) -> Self {
+        Self::new(i2c, BME280_I2C_ADDR_PRIMARY)
     }
 
     /// Create a new BME280 struct using the secondary I²C address `0x77`
-    pub fn new_secondary(i2c: I2C, delay: D) -> Self {
-        Self::new(i2c, BME280_I2C_ADDR_SECONDARY, delay)
+    pub fn new_secondary(i2c: I2C) -> Self {
+        Self::new(i2c, BME280_I2C_ADDR_SECONDARY)
     }
 
     /// Create a new BME280 struct using a custom I²C address
-    pub fn new(i2c: I2C, address: u8, delay: D) -> Self {
+    pub fn new(i2c: I2C, address: u8) -> Self {
         BME280 {
             i2c,
             address,
-            delay,
             calibration: None,
         }
     }
 
     /// Initializes the BME280
-    pub fn init(&mut self) -> Result<(), Error<E>> {
+    pub fn init<D: DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), Error<E>> {
         self.verify_chip_id()?;
-        self.soft_reset()?;
+        self.soft_reset(delay)?;
         self.calibrate()?;
-        self.configure()
+        self.configure(delay)
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<E>> {
@@ -363,9 +359,9 @@ where
         }
     }
 
-    fn soft_reset(&mut self) -> Result<(), Error<E>> {
+    fn soft_reset<D: DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), Error<E>> {
         self.write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
-        self.delay.delay_ms(2); // startup time is 2ms
+        delay.delay_ms(2); // startup time is 2ms
         Ok(())
     }
 
@@ -376,10 +372,10 @@ where
         Ok(())
     }
 
-    fn configure(&mut self) -> Result<(), Error<E>> {
+    fn configure<D: DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), Error<E>> {
         match self.mode()? {
             SensorMode::Sleep => {}
-            _ => self.soft_reset()?,
+            _ => self.soft_reset(delay)?,
         };
 
         self.write_register(
@@ -427,14 +423,14 @@ where
         }
     }
 
-    fn forced(&mut self) -> Result<(), Error<E>> {
-        self.set_mode(BME280_FORCED_MODE)
+    fn forced<D: DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), Error<E>> {
+        self.set_mode(BME280_FORCED_MODE, delay)
     }
 
-    fn set_mode(&mut self, mode: u8) -> Result<(), Error<E>> {
+    fn set_mode<D: DelayMs<u8>>(&mut self, mode: u8, delay: &mut D) -> Result<(), Error<E>> {
         match self.mode()? {
             SensorMode::Sleep => {}
-            _ => self.soft_reset()?,
+            _ => self.soft_reset(delay)?,
         };
         let data = self.read_register(BME280_PWR_CTRL_ADDR)?;
         let data = set_bits!(data, BME280_SENSOR_MODE_MSK, 0, mode);
@@ -442,9 +438,9 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub fn measure(&mut self) -> Result<Measurements<E>, Error<E>> {
-        self.forced()?;
-        self.delay.delay_ms(40); // await measurement
+    pub fn measure<D: DelayMs<u8>>(&mut self, delay: &mut D) -> Result<Measurements<E>, Error<E>> {
+        self.forced(delay)?;
+        delay.delay_ms(40); // await measurement
         let measurements = self.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {
