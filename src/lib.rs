@@ -66,6 +66,9 @@ use core::marker::PhantomData;
 use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::blocking::i2c::{Read, Write, WriteRead};
 
+#[cfg(feature = "ufmt-impl")]
+use ufmt::{uDebug, uWrite, Formatter};
+
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
@@ -149,6 +152,22 @@ pub enum Error<E> {
     NoCalibrationData,
     /// Chip ID doesn't match expected value
     UnsupportedChip,
+}
+
+#[cfg(feature = "ufmt-impl")]
+impl<E> uDebug for Error<E> {
+    fn fmt<W: ?Sized>(&self, f: &mut Formatter<W>) -> Result<(), W::Error>
+    where
+        W: uWrite,
+    {
+        match self {
+            Error::CompensationFailed => f.write_str("CompensationFailed"),
+            Error::I2c(_) => f.write_str("I2c"),
+            Error::InvalidData => f.write_str("InvalidData"),
+            Error::NoCalibrationData => f.write_str("NoCalibrationData"),
+            Error::UnsupportedChip => f.write_str("UnsupportedChip"),
+        }
+    }
 }
 
 /// BME280 operating mode

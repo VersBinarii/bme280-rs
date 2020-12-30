@@ -12,6 +12,10 @@ edition = "2018"
 [dependencies]
 embedded-hal = "0.2.3"
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
+ufmt = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 linux-embedded-hal = "0.3.0"
+
+[features]
+ufmt-impl = ["ufmt"]
