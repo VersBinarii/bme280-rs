@@ -9,9 +9,13 @@ keywords = ["bme280", "bmp280", "temperature", "pressure", "humidity"]
 categories = ["embedded", "no-std", "hardware-support"]
 edition = "2018"
 
+[features]
+with-std = ["derive_more"]
+
 [dependencies]
 embedded-hal = "0.2.3"
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
+derive_more = { version = "0.99.11", optional = true}
 
 [dev-dependencies]
 linux-embedded-hal = "0.3.0"
