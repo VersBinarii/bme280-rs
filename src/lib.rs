@@ -161,6 +161,7 @@ pub enum Error<E> {
 }
 
 #[cfg(feature = "with-std")]
+/// Enabling the `with-std` feature will allow standard error handling
 impl<T: fmt::Debug + fmt::Display> error::Error for Error<T> {}
 
 /// BME280 operating mode
