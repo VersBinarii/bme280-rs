@@ -1,6 +1,6 @@
 [package]
 name = "bme280"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Sean Bruton <sean@uberfoo.net>"]
 description = "A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric pressure sensor and the Bosch BMP280 temperature, and atmospheric pressure sensor"
 repository = "https://github.com/uber-foo/bme280-rs"
