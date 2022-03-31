@@ -10,7 +10,7 @@ A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric
 use linux_embedded_hal as hal;
 
 use linux_embedded_hal::{Delay, I2cdev};
-use bme280::BME280;
+use bme280::i2c::BME280;
 
 // using Linux I2C Bus #1 in this example
 let i2c_bus = I2cdev::new("/dev/i2c-1").unwrap();
