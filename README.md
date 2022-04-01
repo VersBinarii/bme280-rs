@@ -1,9 +1,4 @@
 # bme280
-========
-
-[![Crates.io](https://img.shields.io/crates/d/bme280.svg)](https://crates.io/crates/bme280)
-[![Crates.io](https://img.shields.io/crates/v/bme280.svg)](https://crates.io/crates/bme280)
-[![Released API docs](https://docs.rs/bme280/badge.svg)](https://docs.rs/bme280)
 
 [![Crates.io](https://img.shields.io/crates/d/bme280.svg)](https://crates.io/crates/bme280)
 [![Crates.io](https://img.shields.io/crates/v/bme280.svg)](https://crates.io/crates/bme280)
