@@ -1,8 +1,0 @@
-[package]
-name = "example-bme280"
-version = "0.0.1"
-authors = ["Sean Bruton <sean@uberfoo.net>"]
-
-[dependencies]
-bme280 = { path = ".." }
-linux-embedded-hal = "0.2.0"
