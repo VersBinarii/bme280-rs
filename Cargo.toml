@@ -22,7 +22,7 @@ cortex-m-rtic = "1.0.0"
 cortex-m = "0.7.3"
 cortex-m-rt = "0.7.0"
 defmt-rtt = "0.3.0"
-panic-semihosting = "*"
+panic-semihosting = "0.6"
 
 [dev-dependencies.stm32f4xx-hal]
 version = "0.12.0"
