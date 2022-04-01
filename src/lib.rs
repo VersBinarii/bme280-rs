@@ -334,26 +334,23 @@ trait Interface {
 
 /// Common driver code for I2C and SPI interfaces
 #[derive(Debug, Default)]
-struct BME280Common<I, D> {
+struct BME280Common<I> {
     /// Interface to the chip (either I2C or SPI)
     interface: I,
-    /// concrete Delay implementation
-    delay: D,
     /// calibration data
     calibration: Option<CalibrationData>,
 }
 
-impl<I, D> BME280Common<I, D>
+impl<I> BME280Common<I>
 where
     I: Interface,
-    D: DelayUs,
 {
     /// Initializes the BME280
-    fn init(&mut self) -> Result<(), Error<I::Error>> {
+    fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         self.verify_chip_id()?;
-        self.soft_reset()?;
+        self.soft_reset(delay)?;
         self.calibrate()?;
-        self.configure()
+        self.configure(delay)
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<I::Error>> {
@@ -365,10 +362,10 @@ where
         }
     }
 
-    fn soft_reset(&mut self) -> Result<(), Error<I::Error>> {
+    fn soft_reset<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         self.interface
             .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
-        self.delay.delay_ms(2).map_err(|_| Error::Delay)?; // startup time is 2ms
+        delay.delay_ms(2).map_err(|_| Error::Delay)?; // startup time is 2ms
         Ok(())
     }
 
@@ -381,10 +378,10 @@ where
         Ok(())
     }
 
-    fn configure(&mut self) -> Result<(), Error<I::Error>> {
+    fn configure<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         match self.mode()? {
             SensorMode::Sleep => {}
-            _ => self.soft_reset()?,
+            _ => self.soft_reset(delay)?,
         };
 
         self.interface.write_register(
@@ -430,14 +427,14 @@ where
         }
     }
 
-    fn forced(&mut self) -> Result<(), Error<I::Error>> {
-        self.set_mode(BME280_FORCED_MODE)
+    fn forced<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
+        self.set_mode(BME280_FORCED_MODE, delay)
     }
 
-    fn set_mode(&mut self, mode: u8) -> Result<(), Error<I::Error>> {
+    fn set_mode<D: DelayUs>(&mut self, mode: u8, delay: &mut D) -> Result<(), Error<I::Error>> {
         match self.mode()? {
             SensorMode::Sleep => {}
-            _ => self.soft_reset()?,
+            _ => self.soft_reset(delay)?,
         };
         let data = self.interface.read_register(BME280_PWR_CTRL_ADDR)?;
         let data = set_bits!(data, BME280_SENSOR_MODE_MSK, 0, mode);
@@ -445,9 +442,12 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    fn measure(&mut self) -> Result<Measurements<I::Error>, Error<I::Error>> {
-        self.forced()?;
-        self.delay.delay_ms(40).map_err(|_| Error::Delay)?; // await measurement
+    fn measure<D: DelayUs>(
+        &mut self,
+        delay: &mut D,
+    ) -> Result<Measurements<I::Error>, Error<I::Error>> {
+        self.forced(delay)?;
+        delay.delay_ms(40).map_err(|_| Error::Delay)?; // await measurement
         let measurements = self.interface.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {

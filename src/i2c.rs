@@ -13,44 +13,45 @@ const BME280_I2C_ADDR_SECONDARY: u8 = 0x77;
 
 /// Representation of a BME280
 #[derive(Debug, Default)]
-pub struct BME280<I2C, D> {
-    common: BME280Common<I2CInterface<I2C>, D>,
+pub struct BME280<I2C> {
+    common: BME280Common<I2CInterface<I2C>>,
 }
 
-impl<I2C, D> BME280<I2C, D>
+impl<I2C> BME280<I2C>
 where
     I2C: I2c + ErrorType,
-    D: DelayUs,
 {
     /// Create a new BME280 struct using the primary I²C address `0x76`
-    pub fn new_primary(i2c: I2C, delay: D) -> Self {
-        Self::new(i2c, BME280_I2C_ADDR_PRIMARY, delay)
+    pub fn new_primary(i2c: I2C) -> Self {
+        Self::new(i2c, BME280_I2C_ADDR_PRIMARY)
     }
 
     /// Create a new BME280 struct using the secondary I²C address `0x77`
-    pub fn new_secondary(i2c: I2C, delay: D) -> Self {
-        Self::new(i2c, BME280_I2C_ADDR_SECONDARY, delay)
+    pub fn new_secondary(i2c: I2C) -> Self {
+        Self::new(i2c, BME280_I2C_ADDR_SECONDARY)
     }
 
     /// Create a new BME280 struct using a custom I²C address
-    pub fn new(i2c: I2C, address: u8, delay: D) -> Self {
+    pub fn new(i2c: I2C, address: u8) -> Self {
         BME280 {
             common: BME280Common {
                 interface: I2CInterface { i2c, address },
-                delay,
                 calibration: None,
             },
         }
     }
 
     /// Initializes the BME280
-    pub fn init(&mut self) -> Result<(), Error<I2C::Error>> {
-        self.common.init()
+    pub fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
+        self.common.init(delay)
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub fn measure(&mut self) -> Result<Measurements<I2C::Error>, Error<I2C::Error>> {
-        self.common.measure()
+    pub fn measure<D: DelayUs>(
+        &mut self,
+        delay: &mut D,
+    ) -> Result<Measurements<I2C::Error>, Error<I2C::Error>> {
+        self.common.measure(delay)
     }
 }
 

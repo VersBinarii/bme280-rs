@@ -11,40 +11,39 @@ use super::{
 
 /// Representation of a BME280
 #[derive(Debug, Default)]
-pub struct BME280<SPI, CS, D> {
-    common: BME280Common<SPIInterface<SPI, CS>, D>,
+pub struct BME280<SPI, CS> {
+    common: BME280Common<SPIInterface<SPI, CS>>,
 }
 
-impl<SPI, CS, D, SPIE, PinE> BME280<SPI, CS, D>
+impl<SPI, CS, SPIE, PinE> BME280<SPI, CS>
 where
     SPI: Transfer<u8, Error = SPIE>,
     CS: OutputPin<Error = PinE>,
-    D: DelayUs,
 {
     /// Create a new BME280 struct
-    pub fn new(spi: SPI, mut cs: CS, delay: D) -> Result<Self, Error<SPIError<SPIE, PinE>>> {
+    pub fn new(spi: SPI, mut cs: CS) -> Result<Self, Error<SPIError<SPIE, PinE>>> {
         // Deassert chip-select.
         cs.set_high().map_err(|e| Error::Bus(SPIError::Pin(e)))?;
 
         Ok(BME280 {
             common: BME280Common {
                 interface: SPIInterface { spi, cs },
-                delay,
                 calibration: None,
             },
         })
     }
 
     /// Initializes the BME280
-    pub fn init(&mut self) -> Result<(), Error<SPIError<SPIE, PinE>>> {
-        self.common.init()
+    pub fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<SPIError<SPIE, PinE>>> {
+        self.common.init(delay)
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub fn measure(
+    pub fn measure<D: DelayUs>(
         &mut self,
+        delay: &mut D,
     ) -> Result<Measurements<SPIError<SPIE, PinE>>, Error<SPIError<SPIE, PinE>>> {
-        self.common.measure()
+        self.common.measure(delay)
     }
 }
 
