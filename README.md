@@ -1,10 +1,13 @@
 # bme280
+========
+
+[![Crates.io](https://img.shields.io/crates/d/bme280.svg)](https://crates.io/crates/bme280)
+[![Crates.io](https://img.shields.io/crates/v/bme280.svg)](https://crates.io/crates/bme280)
+[![Released API docs](https://docs.rs/bme280/badge.svg)](https://docs.rs/bme280)
 
 A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric pressure sensor and the Bosch BMP280 temperature and atmospheric pressure sensor.
 
 ## Usage
-
-[View Complete Documentation Here](https://docs.rs/bme280)
 
 ```rust
 use linux_embedded_hal as hal;
