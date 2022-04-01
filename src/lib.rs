@@ -71,6 +71,9 @@ use embedded_hal::delay::blocking::DelayUs;
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
+#[cfg(feature = "with_defmt")]
+use defmt::{write, Format, Formatter};
+
 const BME280_PWR_CTRL_ADDR: u8 = 0xF4;
 const BME280_CTRL_HUM_ADDR: u8 = 0xF2;
 const BME280_CTRL_MEAS_ADDR: u8 = 0xF4;
@@ -150,6 +153,20 @@ pub enum Error<E> {
     UnsupportedChip,
     /// Delay error
     Delay,
+}
+
+#[cfg(feature = "with_defmt")]
+impl<E> Format for Error<E> {
+    fn format(&self, fmt: Formatter) {
+        match self {
+            Error::CompensationFailed => write!(fmt, "Compensation failure"),
+            Error::Bus(_) => write!(fmt, "Bus error"),
+            Error::InvalidData => write!(fmt, "Invalid data"),
+            Error::NoCalibrationData => write!(fmt, "No calibration data"),
+            Error::UnsupportedChip => write!(fmt, "Unsupported chip"),
+            Error::Delay => write!(fmt, "Delay issue"),
+        }
+    }
 }
 
 /// BME280 operating mode
