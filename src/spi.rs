@@ -1,8 +1,8 @@
 //! BME280 driver for sensors attached via SPI.
 
-use embedded_hal::blocking::delay::DelayMs;
-use embedded_hal::blocking::spi::Transfer;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::digital::blocking::OutputPin;
+use embedded_hal::spi::blocking::Transfer;
 
 use super::{
     BME280Common, Error, Interface, Measurements, BME280_H_CALIB_DATA_LEN,
@@ -19,7 +19,7 @@ impl<SPI, CS, D, SPIE, PinE> BME280<SPI, CS, D>
 where
     SPI: Transfer<u8, Error = SPIE>,
     CS: OutputPin<Error = PinE>,
-    D: DelayMs<u8>,
+    D: DelayUs,
 {
     /// Create a new BME280 struct
     pub fn new(spi: SPI, mut cs: CS, delay: D) -> Result<Self, Error<SPIError<SPIE, PinE>>> {
@@ -102,9 +102,9 @@ where
             .set_low()
             .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
         // If the first bit is 0, the register is written.
-        let mut transfer = [register & 0x7f, payload];
+        let transfer = [register & 0x7f, payload];
         self.spi
-            .transfer(&mut transfer)
+            .transfer(&mut [], &transfer)
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         self.cs
             .set_high()
@@ -126,12 +126,8 @@ where
         self.cs
             .set_low()
             .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
-        let mut register = [register];
         self.spi
-            .transfer(&mut register)
-            .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
-        self.spi
-            .transfer(data)
+            .transfer(data, &[register])
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         self.cs
             .set_high()

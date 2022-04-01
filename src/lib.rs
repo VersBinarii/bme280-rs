@@ -66,7 +66,7 @@ pub mod i2c;
 pub mod spi;
 
 use core::marker::PhantomData;
-use embedded_hal::blocking::delay::DelayMs;
+use embedded_hal::delay::blocking::DelayUs;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -148,6 +148,8 @@ pub enum Error<E> {
     NoCalibrationData,
     /// Chip ID doesn't match expected value
     UnsupportedChip,
+    /// Delay error
+    Delay,
 }
 
 /// BME280 operating mode
@@ -344,7 +346,7 @@ struct BME280Common<I, D> {
 impl<I, D> BME280Common<I, D>
 where
     I: Interface,
-    D: DelayMs<u8>,
+    D: DelayUs,
 {
     /// Initializes the BME280
     fn init(&mut self) -> Result<(), Error<I::Error>> {
@@ -366,7 +368,7 @@ where
     fn soft_reset(&mut self) -> Result<(), Error<I::Error>> {
         self.interface
             .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)?;
-        self.delay.delay_ms(2); // startup time is 2ms
+        self.delay.delay_ms(2).map_err(|_| Error::Delay)?; // startup time is 2ms
         Ok(())
     }
 
@@ -445,7 +447,7 @@ where
     /// Captures and processes sensor data for temperature, pressure, and humidity
     fn measure(&mut self) -> Result<Measurements<I::Error>, Error<I::Error>> {
         self.forced()?;
-        self.delay.delay_ms(40); // await measurement
+        self.delay.delay_ms(40).map_err(|_| Error::Delay)?; // await measurement
         let measurements = self.interface.read_data(BME280_DATA_ADDR)?;
         match self.calibration.as_mut() {
             Some(calibration) => {
