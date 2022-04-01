@@ -22,7 +22,8 @@ mod app {
 
     #[local]
     struct Local {
-        bme: BME280<I2c<I2C1, (Scl, Sda)>, Delay<TIM2, 1000000>>,
+        bme: BME280<I2c<I2C1, (Scl, Sda)>>,
+        delay: Delay<TIM2, 1000000>,
     }
 
     #[init]
@@ -61,24 +62,25 @@ mod app {
         );
 
         //Initialize the sensor
-        let delay = dp.TIM2.delay_us(&clocks);
-        let mut bme = BME280::new_primary(i2c, delay);
-        bme.init()
+        let mut delay = dp.TIM2.delay_us(&clocks);
+        let mut bme = BME280::new_primary(i2c);
+        bme.init(&mut delay)
             .map_err(|_| {
                 defmt::println!("Could not initialize bme280, Error");
                 panic!();
             })
             .unwrap();
 
-        (Shared {}, Local { bme }, init::Monotonics())
+        (Shared {}, Local { bme, delay }, init::Monotonics())
     }
 
-    #[idle(local = [bme])]
+    #[idle(local = [bme, delay])]
     fn idle(cx: idle::Context) -> ! {
         let bme = cx.local.bme;
+        let delay = cx.local.delay;
 
         loop {
-            match bme.measure() {
+            match bme.measure(delay) {
                 Ok(measurements) => {
                     defmt::println!("Relative Humidity = {}%", measurements.humidity);
                     defmt::println!("Temperature = {} deg C", measurements.temperature);
@@ -88,6 +90,7 @@ mod app {
                     defmt::println!("Could not read bme280 due to error");
                 }
             }
+            let _ = delay.delay_ms(5000u32);
         }
     }
 }
