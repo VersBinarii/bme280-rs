@@ -16,6 +16,7 @@ name = "bme280"
 embedded-hal = "1.0.0-alpha.7"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 defmt = { version = "0.3.0", optional = true }
+derive_more = { version = "0.99.17", optional = true}
 
 [dev-dependencies]
 cortex-m-rtic = "1.0.0"
@@ -30,6 +31,7 @@ features = ["stm32f411"]
 
 [features]
 with_defmt = ["defmt"]
+with_std = ["derive_more"]
 
 [[example]]
 name = "rtic"

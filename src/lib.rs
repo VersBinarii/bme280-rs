@@ -16,7 +16,8 @@
     unused_imports,
     unused_must_use
 )]
-#![no_std]
+// Turn off no_std if we turn on the "with_std" feature
+#![cfg_attr(not(feature = "with_std"), no_std)]
 
 //! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
 //! [`embedded-hal`](https://github.com/japaric/embedded-hal) traits.
@@ -73,6 +74,13 @@ use serde::Serialize;
 
 #[cfg(feature = "with_defmt")]
 use defmt::{write, Format, Formatter};
+
+#[cfg(feature = "with_std")]
+use derive_more::Display;
+#[cfg(feature = "with_std")]
+use std::error;
+#[cfg(feature = "with_std")]
+use std::fmt;
 
 const BME280_PWR_CTRL_ADDR: u8 = 0xF4;
 const BME280_CTRL_HUM_ADDR: u8 = 0xF2;
@@ -139,6 +147,7 @@ macro_rules! set_bits {
 }
 
 /// BME280 errors
+#[cfg_attr(feature = "with_std", derive(Display))]
 #[derive(Debug)]
 pub enum Error<E> {
     /// Failed to compensate a raw measurement
@@ -168,6 +177,9 @@ impl<E> Format for Error<E> {
         }
     }
 }
+
+#[cfg(feature = "with_std")]
+impl<T: fmt::Debug + fmt::Display> error::Error for Error<T> {}
 
 /// BME280 operating mode
 #[derive(Debug, Copy, Clone)]
