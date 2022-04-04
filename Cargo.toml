@@ -1,6 +1,6 @@
 [package]
 name = "bme280"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Sean Bruton <sean@uberfoo.net>"]
 description = "A rust device driver for the Bosch BME280 temperature, humidity, and atmospheric pressure sensor and the Bosch BMP280 temperature, and atmospheric pressure sensor"
 repository = "https://github.com/VersBinarii/bme280-rs"
@@ -16,6 +16,7 @@ name = "bme280"
 embedded-hal = "1.0.0-alpha.7"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 defmt = { version = "0.3.0", optional = true }
+derive_more = { version = "0.99.17", optional = true}
 
 [dev-dependencies]
 cortex-m-rtic = "1.0.0"
@@ -30,6 +31,7 @@ features = ["stm32f411"]
 
 [features]
 with_defmt = ["defmt"]
+with_std = ["derive_more"]
 
 [[example]]
 name = "rtic"
