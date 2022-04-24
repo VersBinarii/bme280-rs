@@ -73,7 +73,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>> {
-        let mut data: [u8; BME280_P_T_H_DATA_LEN] = [0; BME280_P_T_H_DATA_LEN];
+        let mut data = [0; BME280_P_T_H_DATA_LEN];
         self.read_any_register(register, &mut data)?;
         Ok(data)
     }
@@ -82,7 +82,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>> {
-        let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
+        let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
         self.read_any_register(register, &mut data)?;
         Ok(data)
     }
@@ -91,7 +91,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>> {
-        let mut data: [u8; BME280_H_CALIB_DATA_LEN] = [0; BME280_H_CALIB_DATA_LEN];
+        let mut data = [0; BME280_H_CALIB_DATA_LEN];
         self.read_any_register(register, &mut data)?;
         Ok(data)
     }

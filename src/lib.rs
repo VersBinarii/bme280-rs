@@ -234,18 +234,18 @@ impl<E> Measurements<E> {
         data: [u8; BME280_P_T_H_DATA_LEN],
         calibration: &mut CalibrationData,
     ) -> Result<Self, Error<E>> {
-        let data_msb: u32 = (data[0] as u32) << 12;
-        let data_lsb: u32 = (data[1] as u32) << 4;
-        let data_xlsb: u32 = (data[2] as u32) >> 4;
+        let data_msb = (data[0] as u32) << 12;
+        let data_lsb = (data[1] as u32) << 4;
+        let data_xlsb = (data[2] as u32) >> 4;
         let pressure = data_msb | data_lsb | data_xlsb;
 
-        let data_msb: u32 = (data[3] as u32) << 12;
-        let data_lsb: u32 = (data[4] as u32) << 4;
-        let data_xlsb: u32 = (data[5] as u32) >> 4;
+        let data_msb = (data[3] as u32) << 12;
+        let data_lsb = (data[4] as u32) << 4;
+        let data_xlsb = (data[5] as u32) >> 4;
         let temperature = data_msb | data_lsb | data_xlsb;
 
-        let data_msb: u32 = (data[6] as u32) << 8;
-        let data_lsb: u32 = data[7] as u32;
+        let data_msb = (data[6] as u32) << 8;
+        let data_lsb = data[7] as u32;
         let humidity = data_msb | data_lsb;
 
         let temperature = Measurements::compensate_temperature(temperature, calibration)?;
@@ -264,7 +264,7 @@ impl<E> Measurements<E> {
         uncompensated: u32,
         calibration: &mut CalibrationData,
     ) -> Result<f32, Error<E>> {
-        let var1: f32 = uncompensated as f32 / 16384.0 - calibration.dig_t1 as f32 / 1024.0;
+        let var1 = uncompensated as f32 / 16384.0 - calibration.dig_t1 as f32 / 1024.0;
         let var1 = var1 * calibration.dig_t2 as f32;
         let var2 = uncompensated as f32 / 131072.0 - calibration.dig_t1 as f32 / 8192.0;
         let var2 = var2 * var2 * calibration.dig_t3 as f32;
@@ -286,20 +286,20 @@ impl<E> Measurements<E> {
         uncompensated: u32,
         calibration: &mut CalibrationData,
     ) -> Result<f32, Error<E>> {
-        let var1: f32 = calibration.t_fine as f32 / 2.0 - 64000.0;
-        let var2: f32 = var1 * var1 * calibration.dig_p6 as f32 / 32768.0;
-        let var2: f32 = var2 + var1 * calibration.dig_p5 as f32 * 2.0;
-        let var2: f32 = var2 / 4.0 + calibration.dig_p4 as f32 * 65536.0;
-        let var3: f32 = calibration.dig_p3 as f32 * var1 * var1 / 524288.0;
-        let var1: f32 = (var3 + calibration.dig_p2 as f32 * var1) / 524288.0;
-        let var1: f32 = (1.0 + var1 / 32768.0) * calibration.dig_p1 as f32;
+        let var1 = calibration.t_fine as f32 / 2.0 - 64000.0;
+        let var2 = var1 * var1 * calibration.dig_p6 as f32 / 32768.0;
+        let var2 = var2 + var1 * calibration.dig_p5 as f32 * 2.0;
+        let var2 = var2 / 4.0 + calibration.dig_p4 as f32 * 65536.0;
+        let var3 = calibration.dig_p3 as f32 * var1 * var1 / 524288.0;
+        let var1 = (var3 + calibration.dig_p2 as f32 * var1) / 524288.0;
+        let var1 = (1.0 + var1 / 32768.0) * calibration.dig_p1 as f32;
 
         let pressure = if var1 > 0.0 {
-            let pressure: f32 = 1048576.0 - uncompensated as f32;
-            let pressure: f32 = (pressure - (var2 / 4096.0)) * 6250.0 / var1;
-            let var1: f32 = calibration.dig_p9 as f32 * pressure * pressure / 2147483648.0;
-            let var2: f32 = pressure * calibration.dig_p8 as f32 / 32768.0;
-            let pressure: f32 = pressure + (var1 + var2 + calibration.dig_p7 as f32) / 16.0;
+            let pressure = 1048576.0 - uncompensated as f32;
+            let pressure = (pressure - (var2 / 4096.0)) * 6250.0 / var1;
+            let var1 = calibration.dig_p9 as f32 * pressure * pressure / 2147483648.0;
+            let var2 = pressure * calibration.dig_p8 as f32 / 32768.0;
+            let pressure = pressure + (var1 + var2 + calibration.dig_p7 as f32) / 16.0;
             if pressure < BME280_PRESSURE_MIN {
                 BME280_PRESSURE_MIN
             } else if pressure > BME280_PRESSURE_MAX {
@@ -317,16 +317,15 @@ impl<E> Measurements<E> {
         uncompensated: u32,
         calibration: &mut CalibrationData,
     ) -> Result<f32, Error<E>> {
-        let var1: f32 = calibration.t_fine as f32 - 76800.0;
-        let var2: f32 =
-            calibration.dig_h4 as f32 * 64.0 + (calibration.dig_h5 as f32 / 16384.0) * var1;
-        let var3: f32 = uncompensated as f32 - var2;
-        let var4: f32 = calibration.dig_h2 as f32 / 65536.0;
-        let var5: f32 = 1.0 + (calibration.dig_h3 as f32 / 67108864.0) * var1;
-        let var6: f32 = 1.0 + (calibration.dig_h6 as f32 / 67108864.0) * var1 * var5;
-        let var6: f32 = var3 * var4 * (var5 * var6);
+        let var1 = calibration.t_fine as f32 - 76800.0;
+        let var2 = calibration.dig_h4 as f32 * 64.0 + (calibration.dig_h5 as f32 / 16384.0) * var1;
+        let var3 = uncompensated as f32 - var2;
+        let var4 = calibration.dig_h2 as f32 / 65536.0;
+        let var5 = 1.0 + (calibration.dig_h3 as f32 / 67108864.0) * var1;
+        let var6 = 1.0 + (calibration.dig_h6 as f32 / 67108864.0) * var1 * var5;
+        let var6 = var3 * var4 * (var5 * var6);
 
-        let humidity: f32 = var6 * (1.0 - calibration.dig_h1 as f32 * var6 / 524288.0);
+        let humidity = var6 * (1.0 - calibration.dig_h1 as f32 * var6 / 524288.0);
         let humidity = if humidity < BME280_HUMIDITY_MIN {
             BME280_HUMIDITY_MIN
         } else if humidity > BME280_HUMIDITY_MAX {

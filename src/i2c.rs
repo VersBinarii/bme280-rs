@@ -82,7 +82,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_P_T_H_DATA_LEN], Error<I2C::Error>> {
-        let mut data: [u8; BME280_P_T_H_DATA_LEN] = [0; BME280_P_T_H_DATA_LEN];
+        let mut data = [0; BME280_P_T_H_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
             .map_err(Error::Bus)?;
@@ -93,7 +93,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<I2C::Error>> {
-        let mut data: [u8; BME280_P_T_CALIB_DATA_LEN] = [0; BME280_P_T_CALIB_DATA_LEN];
+        let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
             .map_err(Error::Bus)?;
@@ -104,7 +104,7 @@ where
         &mut self,
         register: u8,
     ) -> Result<[u8; BME280_H_CALIB_DATA_LEN], Error<I2C::Error>> {
-        let mut data: [u8; BME280_H_CALIB_DATA_LEN] = [0; BME280_H_CALIB_DATA_LEN];
+        let mut data = [0; BME280_H_CALIB_DATA_LEN];
         self.i2c
             .write_read(self.address, &[register], &mut data)
             .map_err(Error::Bus)?;
