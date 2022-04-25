@@ -1,5 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/bme280")]
-#![doc(issue_tracker_base_url = "https://github.com/uber-foo/bme280/issues/")]
+#![doc(issue_tracker_base_url = "https://github.com/VersBinarii/bme280/issues/")]
 #![deny(
     missing_docs,
     missing_debug_implementations,
@@ -20,7 +20,7 @@
 #![cfg_attr(not(feature = "with_std"), no_std)]
 
 //! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
-//! [`embedded-hal`](https://github.com/japaric/embedded-hal) traits.
+//! [`embedded-hal`](https://github.com/rust-embedded/embedded-hal) traits.
 //!
 //! ## The Device
 //!
