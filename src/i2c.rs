@@ -4,8 +4,8 @@ use embedded_hal::delay::blocking::DelayUs;
 use embedded_hal::i2c::{blocking::I2c, ErrorType};
 
 use super::{
-    BME280Common, Error, Interface, Measurements, BME280_H_CALIB_DATA_LEN,
-    BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
+    BME280Common, Configuration, Error, IIRFilter, Interface, Measurements, Oversampling,
+    BME280_H_CALIB_DATA_LEN, BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
 };
 
 const BME280_I2C_ADDR_PRIMARY: u8 = 0x76;
@@ -41,9 +41,27 @@ where
         }
     }
 
-    /// Initializes the BME280
+    /// Initializes the BME280.
+    /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
+    /// coefficient 16.
     pub fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
-        self.common.init(delay)
+        self.common.init(
+            delay,
+            Configuration::default()
+                .with_humidity_oversampling(Oversampling::Oversampling1X)
+                .with_pressure_oversampling(Oversampling::Oversampling16X)
+                .with_temperature_oversampling(Oversampling::Oversampling2X)
+                .with_iir_filter(IIRFilter::Coefficient16),
+        )
+    }
+
+    /// Initializes the BME280, applying the given configuration.
+    pub fn init_with_config<D: DelayUs>(
+        &mut self,
+        delay: &mut D,
+        config: Configuration,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.common.init(delay, config)
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity

@@ -128,10 +128,16 @@ const BME280_CTRL_TEMP_POS: u8 = 0x05;
 
 const BME280_FILTER_MSK: u8 = 0x1C;
 const BME280_FILTER_POS: u8 = 0x02;
+const BME280_FILTER_COEFF_OFF: u8 = 0x00;
+const BME280_FILTER_COEFF_2: u8 = 0x01;
+const BME280_FILTER_COEFF_4: u8 = 0x02;
+const BME280_FILTER_COEFF_8: u8 = 0x03;
 const BME280_FILTER_COEFF_16: u8 = 0x04;
 
 const BME280_OVERSAMPLING_1X: u8 = 0x01;
 const BME280_OVERSAMPLING_2X: u8 = 0x02;
+const BME280_OVERSAMPLING_4X: u8 = 0x03;
+const BME280_OVERSAMPLING_8X: u8 = 0x04;
 const BME280_OVERSAMPLING_16X: u8 = 0x05;
 
 macro_rules! concat_bytes {
@@ -190,6 +196,130 @@ pub enum SensorMode {
     Forced,
     /// Normal mode
     Normal,
+}
+
+/// Oversampling settings for temperature, pressure, and humidity measurements.
+/// See sections 3.4ff of the manual for measurement flow and recommended values.
+/// The default is 1x, i.e., no oversampling.
+#[derive(Debug, Copy, Clone)]
+pub enum Oversampling {
+    /// Disables oversampling.
+    /// Without IIR filtering, this sets the resolution of temperature and pressure measurements
+    /// to 16 bits.
+    Oversampling1X,
+    /// Configures 2x oversampling.
+    /// This increases the resolution of temperature and pressure measurements to 17 bits without
+    /// IIR filtering.
+    Oversampling2X,
+    /// Configures 4x oversampling.
+    /// This increases the resolution of temperature and pressure measurements to 18 bits without
+    /// IIR filtering.
+    Oversampling4X,
+    /// Configures 8x oversampling.
+    /// This increases the resolution of temperature and pressure measurements to 19 bits without
+    /// IIR filtering.
+    Oversampling8X,
+    /// Configures 16x oversampling.
+    /// This increases the resolution of temperature and pressure measurements to 20 bits,
+    /// regardless of IIR filtering.
+    Oversampling16X,
+}
+
+impl Oversampling {
+    fn bits(&self) -> u8 {
+        match self {
+            Oversampling::Oversampling1X => BME280_OVERSAMPLING_1X,
+            Oversampling::Oversampling2X => BME280_OVERSAMPLING_2X,
+            Oversampling::Oversampling4X => BME280_OVERSAMPLING_4X,
+            Oversampling::Oversampling8X => BME280_OVERSAMPLING_8X,
+            Oversampling::Oversampling16X => BME280_OVERSAMPLING_16X,
+        }
+    }
+}
+
+impl Default for Oversampling {
+    fn default() -> Self {
+        Self::Oversampling1X
+    }
+}
+
+/// Lowpass filter settings for pressure and temperature values.
+/// See section 3.4.4 of the datasheet for more information on this.
+/// The default setting is disabled.
+#[derive(Debug, Copy, Clone)]
+pub enum IIRFilter {
+    /// Disables the IIR filter.
+    /// The resolution of pressure and temperature measurements is dictated by their respective
+    /// oversampling settings.
+    Off,
+
+    /// Sets the IIR filter coefficient to 2.
+    /// This increases the resolution of the pressure and temperature measurements to 20 bits.
+    /// See sections 3.4.4 and 3.5 of the datasheet for more information.
+    Coefficient2,
+
+    /// Sets the IIR filter coefficient to 4.
+    Coefficient4,
+
+    /// Sets the IIR filter coefficient to 8.
+    Coefficient8,
+
+    /// Sets the IIR filter coefficient to 16.
+    Coefficient16,
+}
+
+impl IIRFilter {
+    fn bits(&self) -> u8 {
+        match self {
+            IIRFilter::Off => BME280_FILTER_COEFF_OFF,
+            IIRFilter::Coefficient2 => BME280_FILTER_COEFF_2,
+            IIRFilter::Coefficient4 => BME280_FILTER_COEFF_4,
+            IIRFilter::Coefficient8 => BME280_FILTER_COEFF_8,
+            IIRFilter::Coefficient16 => BME280_FILTER_COEFF_16,
+        }
+    }
+}
+
+impl Default for IIRFilter {
+    fn default() -> Self {
+        IIRFilter::Off
+    }
+}
+
+/// Configuration values for the BME280 sensor.
+/// The default sets all oversampling settings to 1x and disables the IIR filter.
+#[derive(Debug, Copy, Clone, Default)]
+pub struct Configuration {
+    temperature_oversampling: Oversampling,
+    pressure_oversampling: Oversampling,
+    humidity_oversampling: Oversampling,
+    iir_filter: IIRFilter,
+}
+
+impl Configuration {
+    /// Sets the temperature oversampling setting.
+    pub fn with_temperature_oversampling(mut self, oversampling: Oversampling) -> Self {
+        self.temperature_oversampling = oversampling;
+        self
+    }
+
+    /// Sets the pressure oversampling setting.
+    pub fn with_pressure_oversampling(mut self, oversampling: Oversampling) -> Self {
+        self.pressure_oversampling = oversampling;
+        self
+    }
+
+    /// Sets the humidity oversampling setting
+    pub fn with_humidity_oversampling(mut self, oversampling: Oversampling) -> Self {
+        self.humidity_oversampling = oversampling;
+        self
+    }
+
+    /// Sets the IIR filter setting.
+    pub fn with_iir_filter(mut self, filter: IIRFilter) -> Self {
+        self.iir_filter = filter;
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -373,12 +503,16 @@ impl<I> BME280Common<I>
 where
     I: Interface,
 {
-    /// Initializes the BME280
-    fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
+    /// Initializes the BME280, applying the given config.
+    fn init<D: DelayUs>(
+        &mut self,
+        delay: &mut D,
+        config: Configuration,
+    ) -> Result<(), Error<I::Error>> {
         self.verify_chip_id()?;
         self.soft_reset(delay)?;
         self.calibrate()?;
-        self.configure(delay)
+        self.configure(delay, config)
     }
 
     fn verify_chip_id(&mut self) -> Result<(), Error<I::Error>> {
@@ -406,7 +540,11 @@ where
         Ok(())
     }
 
-    fn configure<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
+    fn configure<D: DelayUs>(
+        &mut self,
+        delay: &mut D,
+        config: Configuration,
+    ) -> Result<(), Error<I::Error>> {
         match self.mode()? {
             SensorMode::Sleep => {}
             _ => self.soft_reset(delay)?,
@@ -414,24 +552,23 @@ where
 
         self.interface.write_register(
             BME280_CTRL_HUM_ADDR,
-            BME280_OVERSAMPLING_1X & BME280_CTRL_HUM_MSK,
+            config.humidity_oversampling.bits() & BME280_CTRL_HUM_MSK,
         )?;
-        let ctrl_meas = self.interface.read_register(BME280_CTRL_MEAS_ADDR)?;
-        self.interface
-            .write_register(BME280_CTRL_MEAS_ADDR, ctrl_meas)?;
 
+        // As per the datasheet, the ctrl_meas register needs to be written after
+        // the ctrl_hum register for changes to take effect.
         let data = self.interface.read_register(BME280_CTRL_MEAS_ADDR)?;
         let data = set_bits!(
             data,
             BME280_CTRL_PRESS_MSK,
             BME280_CTRL_PRESS_POS,
-            BME280_OVERSAMPLING_16X
+            config.pressure_oversampling.bits()
         );
         let data = set_bits!(
             data,
             BME280_CTRL_TEMP_MSK,
             BME280_CTRL_TEMP_POS,
-            BME280_OVERSAMPLING_2X
+            config.temperature_oversampling.bits()
         );
         self.interface.write_register(BME280_CTRL_MEAS_ADDR, data)?;
 
@@ -440,7 +577,7 @@ where
             data,
             BME280_FILTER_MSK,
             BME280_FILTER_POS,
-            BME280_FILTER_COEFF_16
+            config.iir_filter.bits()
         );
         self.interface.write_register(BME280_CONFIG_ADDR, data)
     }
