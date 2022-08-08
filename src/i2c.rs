@@ -1,25 +1,25 @@
 //! BME280 driver for sensors attached via I2C.
 
-#[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
-#[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
-use embedded_hal::i2c::ErrorType;
-#[cfg(feature = "sync")]
-use embedded_hal::i2c::blocking::I2c;
-#[cfg(feature = "async")]
-use embedded_hal_async::i2c::I2c as AsyncI2c;
 #[cfg(feature = "async")]
 use core::future::Future;
-
-use super::{
-    Configuration, Error, IIRFilter, Measurements, Oversampling,
-    BME280_H_CALIB_DATA_LEN, BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
-};
 #[cfg(feature = "sync")]
-use super::{BME280Common, Interface};
+use embedded_hal::delay::blocking::DelayUs;
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::blocking::I2c;
+use embedded_hal::i2c::ErrorType;
+#[cfg(feature = "async")]
+use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c as AsyncI2c;
+
 #[cfg(feature = "async")]
 use super::{AsyncBME280Common, AsyncInterface};
+#[cfg(feature = "sync")]
+use super::{BME280Common, Interface};
+use super::{
+    Configuration, Error, IIRFilter, Measurements, Oversampling, BME280_H_CALIB_DATA_LEN,
+    BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
+};
 
 const BME280_I2C_ADDR_PRIMARY: u8 = 0x76;
 const BME280_I2C_ADDR_SECONDARY: u8 = 0x77;
@@ -78,14 +78,16 @@ where
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
     pub async fn init<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
-        self.common.init(
-            delay,
-            Configuration::default()
-                .with_humidity_oversampling(Oversampling::Oversampling1X)
-                .with_pressure_oversampling(Oversampling::Oversampling16X)
-                .with_temperature_oversampling(Oversampling::Oversampling2X)
-                .with_iir_filter(IIRFilter::Coefficient16),
-        ).await
+        self.common
+            .init(
+                delay,
+                Configuration::default()
+                    .with_humidity_oversampling(Oversampling::Oversampling1X)
+                    .with_pressure_oversampling(Oversampling::Oversampling16X)
+                    .with_temperature_oversampling(Oversampling::Oversampling2X)
+                    .with_iir_filter(IIRFilter::Coefficient16),
+            )
+            .await
     }
 
     /// Initializes the BME280, applying the given configuration.
@@ -184,7 +186,8 @@ where
         async move {
             let mut data: [u8; 1] = [0];
             self.i2c
-                .write_read(self.address, &[register], &mut data).await
+                .write_read(self.address, &[register], &mut data)
+                .await
                 .map_err(Error::Bus)?;
             Ok(data[0])
         }
@@ -193,14 +196,12 @@ where
     type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadDataFuture<'a> {
+    fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a> {
         async move {
             let mut data = [0; BME280_P_T_H_DATA_LEN];
             self.i2c
-                .write_read(self.address, &[register], &mut data).await
+                .write_read(self.address, &[register], &mut data)
+                .await
                 .map_err(Error::Bus)?;
             Ok(data)
         }
@@ -209,14 +210,12 @@ where
     type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_pt_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadPtCalibDataFuture<'a> {
+    fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a> {
         async move {
             let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
             self.i2c
-                .write_read(self.address, &[register], &mut data).await
+                .write_read(self.address, &[register], &mut data)
+                .await
                 .map_err(Error::Bus)?;
             Ok(data)
         }
@@ -225,14 +224,12 @@ where
     type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_h_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadHCalibDataFuture<'a> {
+    fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a> {
         async move {
             let mut data = [0; BME280_H_CALIB_DATA_LEN];
             self.i2c
-                .write_read(self.address, &[register], &mut data).await
+                .write_read(self.address, &[register], &mut data)
+                .await
                 .map_err(Error::Bus)?;
             Ok(data)
         }
@@ -241,10 +238,15 @@ where
     type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>>
     where
         I2C: 'a;
-    fn write_register<'a>(&'a mut self, register: u8, payload: u8) -> Self::WriteRegisterFuture<'a> {
+    fn write_register<'a>(
+        &'a mut self,
+        register: u8,
+        payload: u8,
+    ) -> Self::WriteRegisterFuture<'a> {
         async move {
             self.i2c
-                .write(self.address, &[register, payload]).await
+                .write(self.address, &[register, payload])
+                .await
                 .map_err(Error::Bus)
         }
     }

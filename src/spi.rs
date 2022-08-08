@@ -1,24 +1,24 @@
 //! BME280 driver for sensors attached via SPI.
 
+#[cfg(feature = "async")]
+use core::future::Future;
 #[cfg(feature = "sync")]
 use embedded_hal::delay::blocking::DelayUs;
-#[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 #[cfg(feature = "sync")]
 use embedded_hal::spi::blocking::{SpiBus, SpiDevice};
 #[cfg(feature = "async")]
-use embedded_hal_async::spi::{SpiDevice as AsyncSpiDevice, SpiBus as AsyncSpiBus};
+use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 #[cfg(feature = "async")]
-use core::future::Future;
+use embedded_hal_async::spi::{SpiBus as AsyncSpiBus, SpiDevice as AsyncSpiDevice};
 
-use super::{
-    Configuration, Error, IIRFilter, Measurements, Oversampling,
-    BME280_H_CALIB_DATA_LEN, BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
-};
-#[cfg(feature = "sync")]
-use super::{BME280Common, Interface};
 #[cfg(feature = "async")]
 use super::{AsyncBME280Common, AsyncInterface};
+#[cfg(feature = "sync")]
+use super::{BME280Common, Interface};
+use super::{
+    Configuration, Error, IIRFilter, Measurements, Oversampling, BME280_H_CALIB_DATA_LEN,
+    BME280_P_T_CALIB_DATA_LEN, BME280_P_T_H_DATA_LEN,
+};
 
 /// Representation of a BME280
 #[maybe_async_cfg::maybe(
@@ -69,15 +69,20 @@ where
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub async fn init<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<SPIError<SPIE>>> {
-        self.common.init(
-            delay,
-            Configuration::default()
-                .with_humidity_oversampling(Oversampling::Oversampling1X)
-                .with_pressure_oversampling(Oversampling::Oversampling16X)
-                .with_temperature_oversampling(Oversampling::Oversampling2X)
-                .with_iir_filter(IIRFilter::Coefficient16),
-        ).await
+    pub async fn init<D: AsyncDelayUs>(
+        &mut self,
+        delay: &mut D,
+    ) -> Result<(), Error<SPIError<SPIE>>> {
+        self.common
+            .init(
+                delay,
+                Configuration::default()
+                    .with_humidity_oversampling(Oversampling::Oversampling1X)
+                    .with_pressure_oversampling(Oversampling::Oversampling16X)
+                    .with_temperature_oversampling(Oversampling::Oversampling2X)
+                    .with_iir_filter(IIRFilter::Coefficient16),
+            )
+            .await
     }
 
     /// Initializes the BME280, applying the given configuration.
@@ -100,11 +105,8 @@ where
 
 /// Register access functions for SPI
 #[maybe_async_cfg::maybe(
-sync(
-    feature = "sync",
-    self = "SPIInterface",
-),
-async(feature = "async", keep_self)
+    sync(feature = "sync", self = "SPIInterface",),
+    async(feature = "async", keep_self)
 )]
 #[derive(Debug, Default)]
 struct AsyncSPIInterface<SPI> {
@@ -185,10 +187,7 @@ where
     type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadDataFuture<'a> {
+    fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a> {
         async move {
             let mut data = [0; BME280_P_T_H_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -199,10 +198,7 @@ where
     type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_pt_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadPtCalibDataFuture<'a> {
+    fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a> {
         async move {
             let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -213,10 +209,7 @@ where
     type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_h_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadHCalibDataFuture<'a> {
+    fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a> {
         async move {
             let mut data = [0; BME280_H_CALIB_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -227,12 +220,17 @@ where
     type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>>
     where
         SPI: 'a;
-    fn write_register<'a>(&'a mut self, register: u8, payload: u8) -> Self::WriteRegisterFuture<'a> {
+    fn write_register<'a>(
+        &'a mut self,
+        register: u8,
+        payload: u8,
+    ) -> Self::WriteRegisterFuture<'a> {
         async move {
             // If the first bit is 0, the register is written.
             let transfer = [register & 0x7f, payload];
             self.spi
-                .transfer(&mut [], &transfer).await
+                .transfer(&mut [], &transfer)
+                .await
                 .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
             Ok(())
         }
@@ -243,10 +241,7 @@ where
     sync(
         feature = "sync",
         self = "SPIInterface",
-        idents(
-            AsyncSpiDevice(sync = "SpiDevice"),
-            AsyncSpiBus(sync = "SpiBus"),
-        )
+        idents(AsyncSpiDevice(sync = "SpiDevice"), AsyncSpiBus(sync = "SpiBus"),)
     ),
     async(feature = "async", keep_self)
 )]
@@ -261,13 +256,12 @@ where
         data: &mut [u8],
     ) -> Result<(), Error<SPIError<SPI::Error>>> {
         self.spi
-            .transfer(data, &[register]).await
+            .transfer(data, &[register])
+            .await
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
     }
 }
-
-
 
 /// Error which occurred during an SPI transaction
 #[derive(Clone, Copy, Debug)]

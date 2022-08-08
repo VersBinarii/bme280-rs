@@ -509,42 +509,37 @@ trait AsyncInterface {
         Self: 'a;
     fn read_register<'a>(&'a mut self, register: u8) -> Self::ReadRegisterFuture<'a>;
 
-    type ReadDataFuture<'a>: Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
+    type ReadDataFuture<'a>: Future<
+        Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>,
+    >
     where
         Self: 'a;
-    fn read_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadDataFuture<'a>;
+    fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a>;
 
-    type ReadPtCalibDataFuture<'a>: Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
+    type ReadPtCalibDataFuture<'a>: Future<
+        Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>,
+    >
     where
         Self: 'a;
-    fn read_pt_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadPtCalibDataFuture<'a>;
+    fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a>;
 
-    type ReadHCalibDataFuture<'a>: Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
+    type ReadHCalibDataFuture<'a>: Future<
+        Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>,
+    >
     where
         Self: 'a;
-    fn read_h_calib_data<'a>(
-        &'a mut self,
-        register: u8,
-    ) -> Self::ReadHCalibDataFuture<'a>;
+    fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a>;
 
     type WriteRegisterFuture<'a>: Future<Output = Result<(), Error<Self::Error>>>
     where
         Self: 'a;
-    fn write_register<'a>(&'a mut self, register: u8, payload: u8) -> Self::WriteRegisterFuture<'a>;
+    fn write_register<'a>(&'a mut self, register: u8, payload: u8)
+        -> Self::WriteRegisterFuture<'a>;
 }
 
 /// Common driver code for I2C and SPI interfaces
 #[maybe_async_cfg::maybe(
-    sync(
-        feature = "sync",
-        self = "BME280Common"
-    ),
+    sync(feature = "sync", self = "BME280Common"),
     async(feature = "async", keep_self)
 )]
 #[derive(Debug, Default)]
@@ -559,10 +554,7 @@ struct AsyncBME280Common<I> {
     sync(
         feature = "sync",
         self = "BME280Common",
-        idents(
-            AsyncInterface(sync = "Interface"),
-            AsyncDelayUs(sync = "DelayUs"),
-        )
+        idents(AsyncInterface(sync = "Interface"), AsyncDelayUs(sync = "DelayUs"),)
     ),
     async(feature = "async", keep_self)
 )]
@@ -593,7 +585,8 @@ where
 
     async fn soft_reset<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         self.interface
-            .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD).await?;
+            .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)
+            .await?;
         delay.delay_ms(2).await.map_err(|_| Error::Delay)?; // startup time is 2ms
         Ok(())
     }
@@ -601,8 +594,12 @@ where
     async fn calibrate(&mut self) -> Result<(), Error<I::Error>> {
         let pt_calib_data = self
             .interface
-            .read_pt_calib_data(BME280_P_T_CALIB_DATA_ADDR).await?;
-        let h_calib_data = self.interface.read_h_calib_data(BME280_H_CALIB_DATA_ADDR).await?;
+            .read_pt_calib_data(BME280_P_T_CALIB_DATA_ADDR)
+            .await?;
+        let h_calib_data = self
+            .interface
+            .read_h_calib_data(BME280_H_CALIB_DATA_ADDR)
+            .await?;
         self.calibration = Some(parse_calib_data(&pt_calib_data, &h_calib_data));
         Ok(())
     }
@@ -617,10 +614,12 @@ where
             _ => self.soft_reset(delay).await?,
         };
 
-        self.interface.write_register(
-            BME280_CTRL_HUM_ADDR,
-            config.humidity_oversampling.bits() & BME280_CTRL_HUM_MSK,
-        ).await?;
+        self.interface
+            .write_register(
+                BME280_CTRL_HUM_ADDR,
+                config.humidity_oversampling.bits() & BME280_CTRL_HUM_MSK,
+            )
+            .await?;
 
         // As per the datasheet, the ctrl_meas register needs to be written after
         // the ctrl_hum register for changes to take effect.
@@ -637,7 +636,9 @@ where
             BME280_CTRL_TEMP_POS,
             config.temperature_oversampling.bits()
         );
-        self.interface.write_register(BME280_CTRL_MEAS_ADDR, data).await?;
+        self.interface
+            .write_register(BME280_CTRL_MEAS_ADDR, data)
+            .await?;
 
         let data = self.interface.read_register(BME280_CONFIG_ADDR).await?;
         let data = set_bits!(
@@ -646,7 +647,9 @@ where
             BME280_FILTER_POS,
             config.iir_filter.bits()
         );
-        self.interface.write_register(BME280_CONFIG_ADDR, data).await
+        self.interface
+            .write_register(BME280_CONFIG_ADDR, data)
+            .await
     }
 
     async fn mode(&mut self) -> Result<SensorMode, Error<I::Error>> {
@@ -663,14 +666,20 @@ where
         self.set_mode(BME280_FORCED_MODE, delay).await
     }
 
-    async fn set_mode<D: AsyncDelayUs>(&mut self, mode: u8, delay: &mut D) -> Result<(), Error<I::Error>> {
+    async fn set_mode<D: AsyncDelayUs>(
+        &mut self,
+        mode: u8,
+        delay: &mut D,
+    ) -> Result<(), Error<I::Error>> {
         match self.mode().await? {
             SensorMode::Sleep => {}
             _ => self.soft_reset(delay).await?,
         };
         let data = self.interface.read_register(BME280_PWR_CTRL_ADDR).await?;
         let data = set_bits!(data, BME280_SENSOR_MODE_MSK, 0, mode);
-        self.interface.write_register(BME280_PWR_CTRL_ADDR, data).await
+        self.interface
+            .write_register(BME280_PWR_CTRL_ADDR, data)
+            .await
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
