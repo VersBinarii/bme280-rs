@@ -643,8 +643,8 @@ fn parse_calib_data(
     let dig_h1 = pt_data[25];
     let dig_h2 = concat_bytes!(h_data[1], h_data[0]) as i16;
     let dig_h3 = h_data[2];
-    let dig_h4 = (h_data[3] as i16 * 16) | ((h_data[4] as i16) & 0x0F);
-    let dig_h5 = (h_data[5] as i16 * 16) | ((h_data[4] as i16) >> 4);
+    let dig_h4 = (h_data[3] as i8 as i16 * 16) | ((h_data[4] as i8 as i16) & 0x0F);
+    let dig_h5 = (h_data[5] as i8 as i16 * 16) | (((h_data[4] as i8 as i16) & 0xF0) >> 4);
     let dig_h6 = h_data[6] as i8;
 
     CalibrationData {
