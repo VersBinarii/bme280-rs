@@ -1,6 +1,6 @@
 //! BME280 driver for sensors attached via SPI.
 
-use embedded_hal::spi::blocking::{SpiBusRead, SpiBusWrite};
+use embedded_hal::spi::blocking::{SpiBus, SpiBusWrite, SpiBusRead};
 use embedded_hal::{delay::blocking::DelayUs, spi::blocking::SpiDevice};
 
 use super::{
@@ -17,7 +17,7 @@ pub struct BME280<DEVICE> {
 impl<DEVICE> BME280<DEVICE>
 where
     DEVICE: SpiDevice,
-    DEVICE::Bus: SpiBusWrite + SpiBusRead,
+    DEVICE::Bus: SpiBus,
 {
     /// Create a new BME280 struct
     pub fn new(device: DEVICE) -> Self {
@@ -71,7 +71,7 @@ struct SPIInterface<DEVICE> {
 impl<DEVICE> Interface for SPIInterface<DEVICE>
 where
     DEVICE: SpiDevice,
-    DEVICE::Bus: SpiBusWrite + SpiBusRead,
+    DEVICE::Bus: SpiBus,
 {
     type Error = DEVICE::Error;
 
@@ -118,7 +118,7 @@ where
 impl<DEVICE> SPIInterface<DEVICE>
 where
     DEVICE: SpiDevice,
-    DEVICE::Bus: SpiBusWrite + SpiBusRead,
+    DEVICE::Bus: SpiBus,
 {
     fn read_any_register(
         &mut self,
