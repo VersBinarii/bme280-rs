@@ -1,8 +1,7 @@
 //! BME280 driver for sensors attached via SPI.
 
-use embedded_hal::delay::blocking::DelayUs;
-use embedded_hal::digital::blocking::OutputPin;
-use embedded_hal::spi::blocking::Transfer;
+use embedded_hal::spi::blocking::{SpiBusRead, SpiBusWrite};
+use embedded_hal::{delay::blocking::DelayUs, spi::blocking::SpiDevice};
 
 use super::{
     BME280Common, Configuration, Error, IIRFilter, Interface, Measurements, Oversampling,
@@ -11,32 +10,29 @@ use super::{
 
 /// Representation of a BME280
 #[derive(Debug, Default)]
-pub struct BME280<SPI, CS> {
-    common: BME280Common<SPIInterface<SPI, CS>>,
+pub struct BME280<DEVICE> {
+    common: BME280Common<SPIInterface<DEVICE>>,
 }
 
-impl<SPI, CS, SPIE, PinE> BME280<SPI, CS>
+impl<DEVICE> BME280<DEVICE>
 where
-    SPI: Transfer<u8, Error = SPIE>,
-    CS: OutputPin<Error = PinE>,
+    DEVICE: SpiDevice,
+    DEVICE::Bus: SpiBusWrite + SpiBusRead,
 {
     /// Create a new BME280 struct
-    pub fn new(spi: SPI, mut cs: CS) -> Result<Self, Error<SPIError<SPIE, PinE>>> {
-        // Deassert chip-select.
-        cs.set_high().map_err(|e| Error::Bus(SPIError::Pin(e)))?;
-
-        Ok(BME280 {
+    pub fn new(device: DEVICE) -> Self {
+        Self {
             common: BME280Common {
-                interface: SPIInterface { spi, cs },
+                interface: SPIInterface { device },
                 calibration: None,
             },
-        })
+        }
     }
 
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<SPIError<SPIE, PinE>>> {
+    pub fn init<D: DelayUs>(&mut self, delay: &mut D) -> Result<(), Error<DEVICE::Error>> {
         self.common.init(
             delay,
             Configuration::default()
@@ -52,7 +48,7 @@ where
         &mut self,
         delay: &mut D,
         config: Configuration,
-    ) -> Result<(), Error<SPIError<SPIE, PinE>>> {
+    ) -> Result<(), Error<DEVICE::Error>> {
         self.common.init(delay, config)
     }
 
@@ -60,26 +56,24 @@ where
     pub fn measure<D: DelayUs>(
         &mut self,
         delay: &mut D,
-    ) -> Result<Measurements<SPIError<SPIE, PinE>>, Error<SPIError<SPIE, PinE>>> {
+    ) -> Result<Measurements<DEVICE::Error>, Error<DEVICE::Error>> {
         self.common.measure(delay)
     }
 }
 
 /// Register access functions for SPI
 #[derive(Debug, Default)]
-struct SPIInterface<SPI, CS> {
+struct SPIInterface<DEVICE> {
     /// concrete SPI device implementation
-    spi: SPI,
-    /// chip-select pin
-    cs: CS,
+    device: DEVICE,
 }
 
-impl<SPI, CS> Interface for SPIInterface<SPI, CS>
+impl<DEVICE> Interface for SPIInterface<DEVICE>
 where
-    SPI: Transfer<u8>,
-    CS: OutputPin,
+    DEVICE: SpiDevice,
+    DEVICE::Bus: SpiBusWrite + SpiBusRead,
 {
-    type Error = SPIError<SPI::Error, CS::Error>;
+    type Error = DEVICE::Error;
 
     fn read_register(&mut self, register: u8) -> Result<u8, Error<Self::Error>> {
         let mut result = [0u8];
@@ -115,49 +109,28 @@ where
     }
 
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<Self::Error>> {
-        self.cs
-            .set_low()
-            .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
         // If the first bit is 0, the register is written.
-        let transfer = [register & 0x7f, payload];
-        self.spi
-            .transfer(&mut [], &transfer)
-            .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
-        self.cs
-            .set_high()
-            .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
-        Ok(())
+        let data = [register & 0x7f, payload];
+        self.device.write(&data).map_err(Error::Bus)
     }
 }
 
-impl<SPI, CS> SPIInterface<SPI, CS>
+impl<DEVICE> SPIInterface<DEVICE>
 where
-    SPI: Transfer<u8>,
-    CS: OutputPin,
+    DEVICE: SpiDevice,
+    DEVICE::Bus: SpiBusWrite + SpiBusRead,
 {
     fn read_any_register(
         &mut self,
         register: u8,
         data: &mut [u8],
-    ) -> Result<(), Error<SPIError<SPI::Error, CS::Error>>> {
-        self.cs
-            .set_low()
-            .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
-        self.spi
-            .transfer(data, &[register])
-            .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
-        self.cs
-            .set_high()
-            .map_err(|e| Error::Bus(SPIError::Pin(e)))?;
+    ) -> Result<(), Error<DEVICE::Error>> {
+        self.device
+            .transaction(|bus| {
+                bus.write(&[register])?;
+                bus.read(data)
+            })
+            .map_err(Error::Bus)?;
         Ok(())
     }
-}
-
-/// Error which occurred during an SPI transaction
-#[derive(Clone, Copy, Debug)]
-pub enum SPIError<SPIE, PinE> {
-    /// The SPI implementation returned an error
-    SPI(SPIE),
-    /// The GPIO implementation returned an error which changing the chip-select pin state
-    Pin(PinE),
 }
