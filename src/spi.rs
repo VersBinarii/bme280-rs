@@ -3,9 +3,9 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayUs;
 #[cfg(feature = "sync")]
-use embedded_hal::spi::blocking::{SpiBus, SpiDevice};
+use embedded_hal::spi::{SpiBus, SpiDevice};
 #[cfg(feature = "async")]
 use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 #[cfg(feature = "async")]

@@ -75,7 +75,7 @@ pub mod spi;
 use core::future::Future;
 use core::marker::PhantomData;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayUs;
 #[cfg(feature = "async")]
 use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 
