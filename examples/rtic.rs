@@ -14,8 +14,8 @@ mod app {
         timer::delay::Delay,
     };
 
-    type Scl = Pin<Alternate<OpenDrain, 4>, 'B', 6>;
-    type Sda = Pin<Alternate<OpenDrain, 4>, 'B', 7>;
+    type Scl = Pin<'B', 6, Alternate<4, OpenDrain>>;
+    type Sda = Pin<'B', 7, Alternate<4, OpenDrain>>;
 
     #[shared]
     struct Shared {}
