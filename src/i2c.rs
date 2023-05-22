@@ -3,10 +3,10 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
-#[cfg(feature = "sync")]
-use embedded_hal::i2c::blocking::I2c;
+use embedded_hal::delay::DelayUs;
 use embedded_hal::i2c::ErrorType;
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::I2c;
 #[cfg(feature = "async")]
 use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 #[cfg(feature = "async")]
@@ -179,7 +179,7 @@ where
 {
     type Error = I2C::Error;
 
-    type ReadRegisterFuture<'a> = impl Future<Output = Result<u8, Error<Self::Error>>>
+    type ReadRegisterFuture<'a> = impl Future<Output = Result<u8, Error<Self::Error>>> + 'a
     where
         I2C: 'a;
     fn read_register<'a>(&'a mut self, register: u8) -> Self::ReadRegisterFuture<'a> {
@@ -193,7 +193,7 @@ where
         }
     }
 
-    type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
+    type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>> + 'a
     where
         I2C: 'a;
     fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a> {
@@ -207,7 +207,7 @@ where
         }
     }
 
-    type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
+    type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>> + 'a
     where
         I2C: 'a;
     fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a> {
@@ -221,7 +221,7 @@ where
         }
     }
 
-    type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
+    type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>> + 'a
     where
         I2C: 'a;
     fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a> {
@@ -235,7 +235,7 @@ where
         }
     }
 
-    type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>>
+    type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>> + 'a
     where
         I2C: 'a;
     fn write_register<'a>(
