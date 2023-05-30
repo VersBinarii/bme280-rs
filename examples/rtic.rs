@@ -1,6 +1,13 @@
+//! Example on using the BME 280 via i2c on a stm32f411.
+//!
+//! To run, make sure you install the correct rustup target:
+//! $ rustup target add thumbv7em-none-eabihf
+//! $ cargo build --target thumbv7em-none-eabihf --examples
+
 #![no_main]
 #![no_std]
 
+use defmt_rtt as _;
 use panic_semihosting as _;
 
 #[rtic::app(device = stm32f4xx_hal::pac)]
@@ -14,8 +21,8 @@ mod app {
         timer::delay::Delay,
     };
 
-    type Scl = Pin<Alternate<OpenDrain, 4>, 'B', 6>;
-    type Sda = Pin<Alternate<OpenDrain, 4>, 'B', 7>;
+    type Scl = Pin<'B', 6, Alternate<4, OpenDrain>>;
+    type Sda = Pin<'B', 7, Alternate<4, OpenDrain>>;
 
     #[shared]
     struct Shared {}
