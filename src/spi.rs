@@ -5,7 +5,7 @@ use core::future::Future;
 #[cfg(feature = "sync")]
 use embedded_hal::delay::blocking::DelayUs;
 #[cfg(feature = "sync")]
-use embedded_hal::spi::blocking::{SpiBus, SpiDevice};
+use embedded_hal::spi::blocking::{SpiBus, SpiBusRead, SpiBusWrite, SpiDevice};
 #[cfg(feature = "async")]
 use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
 #[cfg(feature = "async")]
@@ -157,9 +157,9 @@ where
 
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<Self::Error>> {
         // If the first bit is 0, the register is written.
-        let transfer = [register & 0x7f, payload];
+        let data = [register & 0x7f, payload];
         self.spi
-            .transfer(&mut [], &transfer)
+            .write(&data)
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
     }
@@ -256,7 +256,10 @@ where
         data: &mut [u8],
     ) -> Result<(), Error<SPIError<SPI::Error>>> {
         self.spi
-            .transfer(data, &[register])
+            .transaction(|bus| {
+                bus.write(&[register])?;
+                bus.read(data)
+            })
             .await
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
