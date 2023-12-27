@@ -21,7 +21,8 @@
 #![cfg_attr(
     feature = "async",
     feature(generic_associated_types),
-    feature(type_alias_impl_trait)
+    feature(type_alias_impl_trait),
+    feature(async_fn_in_trait)
 )]
 
 //! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
