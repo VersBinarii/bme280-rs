@@ -44,7 +44,6 @@ pub struct AsyncBME280<SPI> {
         self = "BME280",
         idents(
             AsyncSpiDevice(sync = "SpiDevice"),
-            AsyncSpiBus(sync = "SpiBus"),
             AsyncSPIInterface(sync = "SPIInterface"),
             AsyncDelayNs(sync = "DelayNs"),
             AsyncBME280Common(sync = "BME280Common"),
@@ -167,8 +166,7 @@ where
 #[cfg(feature = "async")]
 impl<SPI> AsyncInterface for AsyncSPIInterface<SPI>
 where
-    SPI: AsyncSpiDevice,
-    SPI::Bus: AsyncSpiBus<u8>,
+    SPI: AsyncSpiDevice
 {
     type Error = SPIError<SPI::Error>;
 
@@ -240,7 +238,7 @@ where
     sync(
         feature = "sync",
         self = "SPIInterface",
-        idents(AsyncSpiDevice(sync = "SpiDevice"), AsyncSpiBus(sync = "SpiBus"),)
+        idents(AsyncSpiDevice(sync = "SpiDevice"),)
     ),
     async(feature = "async", keep_self)
 )]
