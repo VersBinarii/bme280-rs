@@ -3,12 +3,12 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
-#[cfg(feature = "sync")]
-use embedded_hal::i2c::blocking::I2c;
+use embedded_hal::delay::DelayNs;
 use embedded_hal::i2c::ErrorType;
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::I2c;
 #[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
 #[cfg(feature = "async")]
 use embedded_hal_async::i2c::I2c as AsyncI2c;
 
@@ -44,7 +44,7 @@ pub struct AsyncBME280<I2C> {
         self = "BME280",
         idents(
             AsyncI2c(sync = "I2c"),
-            AsyncDelayUs(sync = "DelayUs"),
+            AsyncDelayNs(sync = "DelayNs"),
             AsyncBME280Common(sync = "BME280Common"),
         )
     ),
@@ -77,7 +77,7 @@ where
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub async fn init<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
+    pub async fn init<D: AsyncDelayNs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
         self.common
             .init(
                 delay,
@@ -91,7 +91,7 @@ where
     }
 
     /// Initializes the BME280, applying the given configuration.
-    pub async fn init_with_config<D: AsyncDelayUs>(
+    pub async fn init_with_config<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -100,7 +100,7 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub async fn measure<D: AsyncDelayUs>(
+    pub async fn measure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<Measurements<I2C::Error>, Error<I2C::Error>> {

@@ -22,7 +22,7 @@ mod app {
 
     #[local]
     struct Local {
-        bme: BME280<I2c<I2C1, (Scl, Sda)>>,
+        bme: BME280<I2c<I2C1>>,
         delay: Delay<TIM2, 1000000>,
     }
 
