@@ -20,10 +20,9 @@
 #![cfg_attr(not(feature = "with_std"), no_std)]
 #![cfg_attr(
     feature = "async",
-    feature(generic_associated_types),
-    feature(type_alias_impl_trait),
-    feature(async_fn_in_trait)
+    feature(type_alias_impl_trait)
 )]
+#![feature(impl_trait_in_assoc_type)]
 
 //! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
 //! [`embedded-hal`](https://github.com/rust-embedded/embedded-hal) traits.
