@@ -166,7 +166,7 @@ where
 #[cfg(feature = "async")]
 impl<SPI> AsyncInterface for AsyncSPIInterface<SPI>
 where
-    SPI: AsyncSpiDevice
+    SPI: AsyncSpiDevice,
 {
     type Error = SPIError<SPI::Error>;
 
@@ -252,9 +252,9 @@ where
         data: &mut [u8],
     ) -> Result<(), Error<SPIError<SPI::Error>>> {
         let register = [register];
-        let mut noperations = [Operation::Write(&register), Operation::Read(data)];
+        let mut operations = [Operation::Write(&register), Operation::Read(data)];
         self.spi
-            .transaction(&mut noperations)
+            .transaction(&mut operations)
             .await
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
