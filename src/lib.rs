@@ -20,8 +20,8 @@
 #![cfg_attr(not(feature = "with_std"), no_std)]
 #![cfg_attr(
     feature = "async",
-    feature(generic_associated_types),
-    feature(type_alias_impl_trait)
+    feature(type_alias_impl_trait),
+    feature(impl_trait_in_assoc_type)
 )]
 
 //! A platform agnostic Rust driver for the Bosch BME280 and BMP280, based on the
@@ -75,9 +75,9 @@ pub mod spi;
 use core::future::Future;
 use core::marker::PhantomData;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayNs;
 #[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -554,7 +554,7 @@ struct AsyncBME280Common<I> {
     sync(
         feature = "sync",
         self = "BME280Common",
-        idents(AsyncInterface(sync = "Interface"), AsyncDelayUs(sync = "DelayUs"),)
+        idents(AsyncInterface(sync = "Interface"), AsyncDelayNs(sync = "DelayNs"),)
     ),
     async(feature = "async", keep_self)
 )]
@@ -563,7 +563,7 @@ where
     I: AsyncInterface,
 {
     /// Initializes the BME280, applying the given config.
-    async fn init<D: AsyncDelayUs>(
+    async fn init<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -583,11 +583,11 @@ where
         }
     }
 
-    async fn soft_reset<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
+    async fn soft_reset<D: AsyncDelayNs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         self.interface
             .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)
             .await?;
-        delay.delay_ms(2).await.map_err(|_| Error::Delay)?; // startup time is 2ms
+        delay.delay_ms(2).await; // startup time is 2ms
         Ok(())
     }
 
@@ -604,7 +604,7 @@ where
         Ok(())
     }
 
-    async fn configure<D: AsyncDelayUs>(
+    async fn configure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -662,11 +662,11 @@ where
         }
     }
 
-    async fn forced<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
+    async fn forced<D: AsyncDelayNs>(&mut self, delay: &mut D) -> Result<(), Error<I::Error>> {
         self.set_mode(BME280_FORCED_MODE, delay).await
     }
 
-    async fn set_mode<D: AsyncDelayUs>(
+    async fn set_mode<D: AsyncDelayNs>(
         &mut self,
         mode: u8,
         delay: &mut D,
@@ -683,12 +683,12 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    async fn measure<D: AsyncDelayUs>(
+    async fn measure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<Measurements<I::Error>, Error<I::Error>> {
         self.forced(delay).await?;
-        delay.delay_ms(40).await.map_err(|_| Error::Delay)?; // await measurement
+        delay.delay_ms(40).await; // await measurement
         let measurements = self.interface.read_data(BME280_DATA_ADDR).await?;
         match self.calibration.as_mut() {
             Some(calibration) => {

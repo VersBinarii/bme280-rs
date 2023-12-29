@@ -3,13 +3,14 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayNs;
+use embedded_hal::spi::Operation;
 #[cfg(feature = "sync")]
-use embedded_hal::spi::blocking::{SpiBus, SpiDevice};
+use embedded_hal::spi::SpiDevice;
 #[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
 #[cfg(feature = "async")]
-use embedded_hal_async::spi::{SpiBus as AsyncSpiBus, SpiDevice as AsyncSpiDevice};
+use embedded_hal_async::spi::SpiDevice as AsyncSpiDevice;
 
 #[cfg(feature = "async")]
 use super::{AsyncBME280Common, AsyncInterface};
@@ -43,9 +44,8 @@ pub struct AsyncBME280<SPI> {
         self = "BME280",
         idents(
             AsyncSpiDevice(sync = "SpiDevice"),
-            AsyncSpiBus(sync = "SpiBus"),
             AsyncSPIInterface(sync = "SPIInterface"),
-            AsyncDelayUs(sync = "DelayUs"),
+            AsyncDelayNs(sync = "DelayNs"),
             AsyncBME280Common(sync = "BME280Common"),
         )
     ),
@@ -54,7 +54,6 @@ pub struct AsyncBME280<SPI> {
 impl<SPI, SPIE> AsyncBME280<SPI>
 where
     SPI: AsyncSpiDevice<Error = SPIE>,
-    SPI::Bus: AsyncSpiBus<u8>,
 {
     /// Create a new BME280 struct
     pub fn new(spi: SPI) -> Result<Self, Error<SPIError<SPIE>>> {
@@ -69,7 +68,7 @@ where
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub async fn init<D: AsyncDelayUs>(
+    pub async fn init<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<(), Error<SPIError<SPIE>>> {
@@ -86,7 +85,7 @@ where
     }
 
     /// Initializes the BME280, applying the given configuration.
-    pub async fn init_with_config<D: AsyncDelayUs>(
+    pub async fn init_with_config<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -95,7 +94,7 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub async fn measure<D: AsyncDelayUs>(
+    pub async fn measure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<Measurements<SPIError<SPIE>>, Error<SPIError<SPIE>>> {
@@ -118,7 +117,6 @@ struct AsyncSPIInterface<SPI> {
 impl<SPI> Interface for SPIInterface<SPI>
 where
     SPI: SpiDevice,
-    SPI::Bus: SpiBus<u8>,
 {
     type Error = SPIError<SPI::Error>;
 
@@ -157,9 +155,9 @@ where
 
     fn write_register(&mut self, register: u8, payload: u8) -> Result<(), Error<Self::Error>> {
         // If the first bit is 0, the register is written.
-        let transfer = [register & 0x7f, payload];
+        let data = [register & 0x7f, payload];
         self.spi
-            .transfer(&mut [], &transfer)
+            .write(&data)
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
     }
@@ -169,7 +167,6 @@ where
 impl<SPI> AsyncInterface for AsyncSPIInterface<SPI>
 where
     SPI: AsyncSpiDevice,
-    SPI::Bus: AsyncSpiBus<u8>,
 {
     type Error = SPIError<SPI::Error>;
 
@@ -241,22 +238,23 @@ where
     sync(
         feature = "sync",
         self = "SPIInterface",
-        idents(AsyncSpiDevice(sync = "SpiDevice"), AsyncSpiBus(sync = "SpiBus"),)
+        idents(AsyncSpiDevice(sync = "SpiDevice"),)
     ),
     async(feature = "async", keep_self)
 )]
 impl<SPI> AsyncSPIInterface<SPI>
 where
     SPI: AsyncSpiDevice,
-    SPI::Bus: AsyncSpiBus<u8>,
 {
     async fn read_any_register(
         &mut self,
         register: u8,
         data: &mut [u8],
     ) -> Result<(), Error<SPIError<SPI::Error>>> {
+        let register = [register];
+        let mut operations = [Operation::Write(&register), Operation::Read(data)];
         self.spi
-            .transfer(data, &[register])
+            .transaction(&mut operations)
             .await
             .map_err(|e| Error::Bus(SPIError::SPI(e)))?;
         Ok(())
