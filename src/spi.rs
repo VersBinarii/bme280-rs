@@ -3,13 +3,13 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayNs;
 #[cfg(feature = "sync")]
-use embedded_hal::spi::blocking::{SpiBus, SpiDevice};
+use embedded_hal::spi::SpiDevice;
 #[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
 #[cfg(feature = "async")]
-use embedded_hal_async::spi::{SpiBus as AsyncSpiBus, SpiDevice as AsyncSpiDevice};
+use embedded_hal_async::spi::SpiDevice as AsyncSpiDevice;
 
 #[cfg(feature = "async")]
 use super::{AsyncBME280Common, AsyncInterface};
@@ -45,7 +45,7 @@ pub struct AsyncBME280<SPI> {
             AsyncSpiDevice(sync = "SpiDevice"),
             AsyncSpiBus(sync = "SpiBus"),
             AsyncSPIInterface(sync = "SPIInterface"),
-            AsyncDelayUs(sync = "DelayUs"),
+            AsyncDelayNs(sync = "DelayNs"),
             AsyncBME280Common(sync = "BME280Common"),
         )
     ),
@@ -54,7 +54,7 @@ pub struct AsyncBME280<SPI> {
 impl<SPI, SPIE> AsyncBME280<SPI>
 where
     SPI: AsyncSpiDevice<Error = SPIE>,
-    SPI::Bus: AsyncSpiBus<u8>,
+    // SPI::Buf: AsyncSpiBus<u8>,
 {
     /// Create a new BME280 struct
     pub fn new(spi: SPI) -> Result<Self, Error<SPIError<SPIE>>> {
@@ -69,7 +69,7 @@ where
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub async fn init<D: AsyncDelayUs>(
+    pub async fn init<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<(), Error<SPIError<SPIE>>> {
@@ -86,7 +86,7 @@ where
     }
 
     /// Initializes the BME280, applying the given configuration.
-    pub async fn init_with_config<D: AsyncDelayUs>(
+    pub async fn init_with_config<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -95,7 +95,7 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub async fn measure<D: AsyncDelayUs>(
+    pub async fn measure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<Measurements<SPIError<SPIE>>, Error<SPIError<SPIE>>> {
@@ -118,7 +118,7 @@ struct AsyncSPIInterface<SPI> {
 impl<SPI> Interface for SPIInterface<SPI>
 where
     SPI: SpiDevice,
-    SPI::Bus: SpiBus<u8>,
+    // SPI::Buf: SpiBus<u8>,
 {
     type Error = SPIError<SPI::Error>;
 
@@ -169,14 +169,14 @@ where
 impl<SPI> AsyncInterface for AsyncSPIInterface<SPI>
 where
     SPI: AsyncSpiDevice,
-    SPI::Bus: AsyncSpiBus<u8>,
+    // SPI::Buf: AsyncSpiBus<u8>,
 {
     type Error = SPIError<SPI::Error>;
 
     type ReadRegisterFuture<'a> = impl Future<Output = Result<u8, Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_register<'a>(&'a mut self, register: u8) -> Self::ReadRegisterFuture<'a> {
+    fn read_register(&mut self, register: u8) -> Self::ReadRegisterFuture<'_> {
         async move {
             let mut result = [0u8];
             self.read_any_register(register, &mut result).await?;
@@ -187,7 +187,7 @@ where
     type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a> {
+    fn read_data(&mut self, register: u8) -> Self::ReadDataFuture<'_> {
         async move {
             let mut data = [0; BME280_P_T_H_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -198,7 +198,7 @@ where
     type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a> {
+    fn read_pt_calib_data(&mut self, register: u8) -> Self::ReadPtCalibDataFuture<'_> {
         async move {
             let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -209,7 +209,7 @@ where
     type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         SPI: 'a;
-    fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a> {
+    fn read_h_calib_data(&mut self, register: u8) -> Self::ReadHCalibDataFuture<'_> {
         async move {
             let mut data = [0; BME280_H_CALIB_DATA_LEN];
             self.read_any_register(register, &mut data).await?;
@@ -220,11 +220,7 @@ where
     type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>>
     where
         SPI: 'a;
-    fn write_register<'a>(
-        &'a mut self,
-        register: u8,
-        payload: u8,
-    ) -> Self::WriteRegisterFuture<'a> {
+    fn write_register(&mut self, register: u8, payload: u8) -> Self::WriteRegisterFuture<'_> {
         async move {
             // If the first bit is 0, the register is written.
             let transfer = [register & 0x7f, payload];
@@ -248,7 +244,7 @@ where
 impl<SPI> AsyncSPIInterface<SPI>
 where
     SPI: AsyncSpiDevice,
-    SPI::Bus: AsyncSpiBus<u8>,
+    // SPI::Buf: AsyncSpiBus<u8>,
 {
     async fn read_any_register(
         &mut self,
