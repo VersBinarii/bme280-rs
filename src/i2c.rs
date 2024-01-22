@@ -3,12 +3,12 @@
 #[cfg(feature = "async")]
 use core::future::Future;
 #[cfg(feature = "sync")]
-use embedded_hal::delay::blocking::DelayUs;
-#[cfg(feature = "sync")]
-use embedded_hal::i2c::blocking::I2c;
+use embedded_hal::delay::DelayNs;
 use embedded_hal::i2c::ErrorType;
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::I2c;
 #[cfg(feature = "async")]
-use embedded_hal_async::delay::DelayUs as AsyncDelayUs;
+use embedded_hal_async::delay::DelayNs as AsyncDelayNs;
 #[cfg(feature = "async")]
 use embedded_hal_async::i2c::I2c as AsyncI2c;
 
@@ -44,7 +44,7 @@ pub struct AsyncBME280<I2C> {
         self = "BME280",
         idents(
             AsyncI2c(sync = "I2c"),
-            AsyncDelayUs(sync = "DelayUs"),
+            AsyncDelayNs(sync = "DelayNs"),
             AsyncBME280Common(sync = "BME280Common"),
         )
     ),
@@ -77,7 +77,7 @@ where
     /// Initializes the BME280.
     /// This configures 2x temperature oversampling, 16x pressure oversampling, and the IIR filter
     /// coefficient 16.
-    pub async fn init<D: AsyncDelayUs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
+    pub async fn init<D: AsyncDelayNs>(&mut self, delay: &mut D) -> Result<(), Error<I2C::Error>> {
         self.common
             .init(
                 delay,
@@ -91,7 +91,7 @@ where
     }
 
     /// Initializes the BME280, applying the given configuration.
-    pub async fn init_with_config<D: AsyncDelayUs>(
+    pub async fn init_with_config<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
         config: Configuration,
@@ -100,7 +100,7 @@ where
     }
 
     /// Captures and processes sensor data for temperature, pressure, and humidity
-    pub async fn measure<D: AsyncDelayUs>(
+    pub async fn measure<D: AsyncDelayNs>(
         &mut self,
         delay: &mut D,
     ) -> Result<Measurements<I2C::Error>, Error<I2C::Error>> {
@@ -182,7 +182,7 @@ where
     type ReadRegisterFuture<'a> = impl Future<Output = Result<u8, Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_register<'a>(&'a mut self, register: u8) -> Self::ReadRegisterFuture<'a> {
+    fn read_register(&mut self, register: u8) -> Self::ReadRegisterFuture<'_> {
         async move {
             let mut data: [u8; 1] = [0];
             self.i2c
@@ -196,7 +196,7 @@ where
     type ReadDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_H_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_data<'a>(&'a mut self, register: u8) -> Self::ReadDataFuture<'a> {
+    fn read_data(&mut self, register: u8) -> Self::ReadDataFuture<'_> {
         async move {
             let mut data = [0; BME280_P_T_H_DATA_LEN];
             self.i2c
@@ -210,7 +210,7 @@ where
     type ReadPtCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_P_T_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_pt_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadPtCalibDataFuture<'a> {
+    fn read_pt_calib_data(&mut self, register: u8) -> Self::ReadPtCalibDataFuture<'_> {
         async move {
             let mut data = [0; BME280_P_T_CALIB_DATA_LEN];
             self.i2c
@@ -224,7 +224,7 @@ where
     type ReadHCalibDataFuture<'a> = impl Future<Output = Result<[u8; BME280_H_CALIB_DATA_LEN], Error<Self::Error>>>
     where
         I2C: 'a;
-    fn read_h_calib_data<'a>(&'a mut self, register: u8) -> Self::ReadHCalibDataFuture<'a> {
+    fn read_h_calib_data(&mut self, register: u8) -> Self::ReadHCalibDataFuture<'_> {
         async move {
             let mut data = [0; BME280_H_CALIB_DATA_LEN];
             self.i2c
@@ -238,11 +238,7 @@ where
     type WriteRegisterFuture<'a> = impl Future<Output = Result<(), Error<Self::Error>>>
     where
         I2C: 'a;
-    fn write_register<'a>(
-        &'a mut self,
-        register: u8,
-        payload: u8,
-    ) -> Self::WriteRegisterFuture<'a> {
+    fn write_register(&mut self, register: u8, payload: u8) -> Self::WriteRegisterFuture<'_> {
         async move {
             self.i2c
                 .write(self.address, &[register, payload])
