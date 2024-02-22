@@ -581,7 +581,7 @@ where
         self.interface
             .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)
             .await?;
-        delay.delay_ns(2).await; // startup time is 2ms
+        delay.delay_ms(2).await; // startup time is 2ms
         Ok(())
     }
 
