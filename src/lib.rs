@@ -199,6 +199,7 @@ impl<T: fmt::Debug + fmt::Display> error::Error for Error<T> {}
 
 /// BME280 operating mode
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 pub enum SensorMode {
     /// Sleep mode
     Sleep,
@@ -212,6 +213,7 @@ pub enum SensorMode {
 /// See sections 3.4ff of the manual for measurement flow and recommended values.
 /// The default is 1x, i.e., no oversampling.
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 pub enum Oversampling {
     /// Disables oversampling.
     /// Without IIR filtering, this sets the resolution of temperature and pressure measurements
@@ -257,6 +259,7 @@ impl Default for Oversampling {
 /// See section 3.4.4 of the datasheet for more information on this.
 /// The default setting is disabled.
 #[derive(Debug, Copy, Clone, Default)]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 pub enum IIRFilter {
     /// Disables the IIR filter.
     /// The resolution of pressure and temperature measurements is dictated by their respective
@@ -294,6 +297,7 @@ impl IIRFilter {
 /// Configuration values for the BME280 sensor.
 /// The default sets all oversampling settings to 1x and disables the IIR filter.
 #[derive(Debug, Copy, Clone, Default)]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 pub struct Configuration {
     temperature_oversampling: Oversampling,
     pressure_oversampling: Oversampling,
@@ -328,6 +332,7 @@ impl Configuration {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 struct CalibrationData {
     dig_t1: u16,
     dig_t2: i16,
@@ -352,6 +357,7 @@ struct CalibrationData {
 
 /// Measurement data
 #[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "with_defmt", derive(defmt::Format))]
 #[derive(Debug)]
 pub struct Measurements<E> {
     /// temperature in degrees celsius
@@ -581,7 +587,7 @@ where
         self.interface
             .write_register(BME280_RESET_ADDR, BME280_SOFT_RESET_CMD)
             .await?;
-        delay.delay_ns(2).await; // startup time is 2ms
+        delay.delay_ms(2).await; // startup time is 2ms
         Ok(())
     }
 
