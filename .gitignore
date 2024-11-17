@@ -2,3 +2,4 @@
 /example/target
 **/*.rs.bk
 Cargo.lock
+.idea
